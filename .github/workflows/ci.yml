@@ -14,9 +14,24 @@ jobs:
   validate:
     name: Lint, Typecheck, Test, and Build
     runs-on: ubuntu-24.04
+    services:
+      postgres:
+        image: postgres:17-alpine
+        env:
+          POSTGRES_USER: postgres
+          POSTGRES_PASSWORD: postgres_ci_password
+          POSTGRES_DB: mercato_ci_test
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd pg_isready
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
     env:
       SKIP_ENV_VALIDATION: "true"
-      DATABASE_URL: "postgresql://postgres:postgres@localhost:5432/mercato_test"
+      DATABASE_URL: "postgresql://postgres:postgres_ci_password@localhost:5432/mercato_ci_dev"
+      TEST_DATABASE_URL: "postgresql://postgres:postgres_ci_password@localhost:5432/mercato_ci_test"
       UPSTASH_REDIS_REST_URL: "https://example-upstash.upstash.io"
       UPSTASH_REDIS_REST_TOKEN: "sample_token_for_ci_pipeline"
       BETTER_AUTH_SECRET: "ci_pipeline_dummy_better_auth_secret_32_chars_min"
@@ -44,6 +59,9 @@ jobs:
 
       - name: Typecheck
         run: pnpm typecheck
+
+      - name: Apply migrations to test database
+        run: pnpm db:migrate:test
 
       - name: Run unit and integration tests
         run: pnpm test

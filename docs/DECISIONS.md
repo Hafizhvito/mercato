@@ -111,3 +111,48 @@ This document records the architectural and engineering decisions made for the M
 * **Context:** Next.js 16 officially renames and transitions `middleware.ts` to `src/proxy.ts` to reflect network boundary proxying and prevent confusion with Express-style middleware pipelines.
 * **Decision:** Implement `src/proxy.ts` as the primary request interception layer, integrating `next-intl` routing and future edge redirects.
 * **Consequences:** Adheres directly to the official Next.js 16 specification, avoids deprecated middleware naming, and cleanly separates network proxying from server action guards.
+
+---
+
+## ADR 0013: Next.js 16 Dynamic Segment Opt-Out with Cache Components
+
+* **Status:** Accepted
+* **Context:** In Next.js 16 with `cacheComponents: true` and `partialPrefetching: true`, legacy route segment config `export const dynamic = "force-dynamic"` is deprecated and rejected by the Turbopack compiler.
+* **Decision:** Protected merchant dashboards and auth boundary layouts declare `export const instant = false` and consume runtime dynamic headers (`await headers()`, `await cookies()`) within Suspense boundaries.
+* **Consequences:** Eliminates build-time static generation errors for authenticated routes, respects Next.js 16 partial prerendering boundaries, and guarantees that merchant data is never served stale from edge cache caches.
+
+---
+
+## ADR 0014: Dual-Branch Database Architecture and Strict Test Database Guard
+
+* **Status:** Accepted
+* **Context:** Running integration tests or migrations against the primary development database poses severe risks of accidental schema modification, data truncation, or cross-tenant contamination.
+* **Decision:** Enforce two separate connection strings: `DATABASE_URL` (development Neon branch) and `TEST_DATABASE_URL` (dedicated test Neon branch or GitHub Actions service container). Vitest test setup and Drizzle test config compare the parsed host and database paths, strictly refusing to execute if both targets match.
+* **Consequences:** Completely shields development and production data from destructive test suites and seed operations, provides deterministic test isolation, and requires zero secret exposure in CI pipelines.
+
+---
+
+## ADR 0015: Storage Abstraction with S3/R2 and Local Filesystem Fallback
+
+* **Status:** Accepted
+* **Context:** Image assets must be uploaded securely, validated for authenticity, and stored with high availability without coupling the application strictly to a single cloud vendor during local development.
+* **Decision:** Implement a `StorageService` interface with two adapters: `S3StorageService` (supporting Cloudflare R2 and AWS S3 via `@aws-sdk/client-s3` and `@aws-sdk/s3-request-presigner`) and `LocalStorageService` (persisting to `public/uploads/` when S3 credentials are unset). Server-side magic-byte inspection inspects the first 12 bytes of file payloads to verify true JPEG, PNG, or WebP signatures regardless of client file extensions.
+* **Consequences:** Eliminates external cloud dependencies for local developers and offline testing, provides direct client-to-storage presigned upload scalability in production, and prevents malicious file upload vulnerabilities.
+
+---
+
+## ADR 0016: Hybrid Search with PostgreSQL tsvector and pg_trgm Trigram Fuzzy Matching
+
+* **Status:** Accepted
+* **Context:** Storefront customer search requires instant, relevant results supporting both exact phrase matching and typo-tolerant search across Indonesian and English product titles and descriptions without operating an expensive external Elasticsearch or Meilisearch cluster.
+* **Decision:** Implement `PostgresSearchService` utilizing native PostgreSQL full-text search (`to_tsvector` and `ts_rank` with GIN indexing) combined with the `pg_trgm` extension for trigram similarity matching. A weighted ranking formula prioritizes title matches over description matches and falls back to trigram similarity when word-stem queries yield sparse hits.
+* **Consequences:** Eliminates third-party search service operational overhead and synchronization lag, delivers sub-10ms search queries directly from PostgreSQL, and natively tolerates typos and partial prefixes in autocomplete queries.
+
+---
+
+## ADR 0017: Cartesian Variant Matrix Generation and Tag-Based Cache Revalidation
+
+* **Status:** Accepted
+* **Context:** Shopify-style product option sets (e.g., Size x Color) require deterministic, collision-free SKU generation and automatic inventory variant matrix calculation, while catalog browses must maintain high edge cache efficiency.
+* **Decision:** Implement a deterministic Cartesian product generator creating variant rows with unique compound abbreviations and fallback sequence counters. Catalog queries utilize Next.js 16 tag-based cache tags (`products`, `product:[slug]`, `categories`, `collections`), selectively purged via `revalidateTag` in merchant mutating Server Actions.
+* **Consequences:** Merchant product forms automatically generate variant combinations with zero missing permutations, edge and ISR caches remain fresh immediately upon merchant updates, and read load on the database remains minimal.

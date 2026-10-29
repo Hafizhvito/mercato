@@ -4,21 +4,24 @@ This document outlines planned enhancements and deferred features across upcomin
 
 ---
 
-## Phase 1: Data Model and Authentication
-- Drizzle ORM schema for users, sessions, accounts, and stores
-- Seed script with realistic Indonesian and international catalog datasets
-- Better Auth setup with email/password and Google OAuth
-- Customer and admin base layouts with role-based navigation guards
-- Automated test database branch migration pipeline
+## Phase 1: Data Model and Authentication [COMPLETED]
+- [x] Drizzle ORM schema for users, sessions, accounts, and stores
+- [x] Seed script with realistic Indonesian and international catalog datasets
+- [x] Better Auth setup with email/password and Google OAuth
+- [x] Customer and admin base layouts with role-based navigation guards
+- [x] Automated test database branch migration pipeline and isolated integration test suite
 
-## Phase 2: Catalog and Admin Product Management
-- Hierarchical categories and collections
-- Multi-variant product modeling (options: size, color, material)
-- Cloudflare R2 signed image uploads with drag-and-drop reordering
-- PostgreSQL full-text search with pg_trgm fuzzy matching
-- Admin bulk actions (status toggle, inventory sync, CSV export/import)
+## Phase 2: Catalog and Admin Product Management [COMPLETED]
+- [x] Categories, collections, products, options, option values, and variants schema with pg_trgm and GIN search indexes
+- [x] Cartesian product variant matrix generator with deterministic collision-free SKU generation
+- [x] Storage abstraction interface with S3/R2 direct uploads, local filesystem fallback, and magic-byte MIME validation
+- [x] Hybrid PostgreSQL search engine combining to_tsvector full-text search with pg_trgm trigram similarity
+- [x] Admin product management (listing, faceted filter, search, creation, editing, image uploads, SEO configuration)
+- [x] Storefront customer catalog browser, search autocomplete with Upstash rate limiting, and Partial Prerendered PDP
+- [x] Realistic 24-product catalog seed across 6 Indonesian commerce categories
+- [ ] Admin bulk actions (status toggle, inventory sync, CSV export/import) [Deferred to Phase 5 operations]
 
-## Phase 3: Cart, Inventory, and Checkout
+## Phase 3: Cart, Inventory, and Checkout [UPCOMING]
 - Server-persisted guest carts merged upon user authentication
 - 15-minute stock reservation with row-level locks (SELECT FOR UPDATE)
 - Indonesian administrative hierarchy address selector (Province, City, District)

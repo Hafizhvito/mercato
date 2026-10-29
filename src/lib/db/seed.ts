@@ -1,4 +1,6 @@
-import { eq } from "drizzle-orm";
+import crypto from "node:crypto";
+import { hashPassword } from "better-auth/crypto";
+import { and, eq } from "drizzle-orm";
 import { auth } from "@/lib/auth";
 import { db } from "@/lib/db";
 import * as schema from "@/lib/db/schema";
@@ -51,7 +53,7 @@ async function main() {
     console.log(`Store already exists: ${existingStore.name} (${storeId})`);
   }
 
-  // 2. Provision administrator / owner user via Better Auth API
+  // 2. Provision or update administrator / owner user
   console.log(`Checking existing user record for ${adminEmail}...`);
   const [existingUser] = await db
     .select()
@@ -88,15 +90,52 @@ async function main() {
       process.exit(1);
     }
   } else {
-    console.log(`Admin user ${adminEmail} already exists. Ensuring owner role...`);
+    console.log(`Admin user ${adminEmail} already exists. Updating role and resetting password...`);
+    const hashedPassword = await hashPassword(adminPassword);
+
     await db
       .update(schema.user)
       .set({
+        name: adminName,
         role: "owner",
         emailVerified: true,
         storeId: storeId,
+        updatedAt: new Date(),
       })
       .where(eq(schema.user.id, existingUser.id));
+
+    const [existingAccount] = await db
+      .select()
+      .from(schema.account)
+      .where(
+        and(
+          eq(schema.account.userId, existingUser.id),
+          eq(schema.account.providerId, "credential"),
+        ),
+      )
+      .limit(1);
+
+    if (existingAccount) {
+      await db
+        .update(schema.account)
+        .set({
+          password: hashedPassword,
+          updatedAt: new Date(),
+        })
+        .where(eq(schema.account.id, existingAccount.id));
+      console.log(`Successfully updated existing credentials for owner: ${adminEmail}`);
+    } else {
+      await db.insert(schema.account).values({
+        id: crypto.randomUUID(),
+        accountId: existingUser.id,
+        providerId: "credential",
+        userId: existingUser.id,
+        password: hashedPassword,
+      });
+      console.log(
+        `Created credential account record with updated password for owner: ${adminEmail}`,
+      );
+    }
   }
 
   console.log("Database seed completed successfully.");

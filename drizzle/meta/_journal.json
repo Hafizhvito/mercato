@@ -8,6 +8,13 @@
       "when": 1793286220246,
       "tag": "0000_sweet_killraven",
       "breakpoints": true
+    },
+    {
+      "idx": 1,
+      "version": "7",
+      "when": 1793305375586,
+      "tag": "0001_parched_bromley",
+      "breakpoints": true
     }
   ]
 }

@@ -1,10 +1,15 @@
 import path from "node:path";
+import { config } from "dotenv";
 import { defineConfig } from "vitest/config";
+
+// Load local environment for testing if present
+config({ path: ".env.local" });
 
 export default defineConfig({
   test: {
     environment: "node",
     globals: true,
+    setupFiles: ["./tests/setup.ts"],
     env: {
       BETTER_AUTH_URL: "http://localhost:3000",
       BETTER_AUTH_SECRET: "test_secret_key_minimum_32_characters_long_for_auth",
