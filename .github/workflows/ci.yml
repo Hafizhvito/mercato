@@ -13,7 +13,7 @@ concurrency:
 jobs:
   validate:
     name: Lint, Typecheck, Test, and Build
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04
     env:
       SKIP_ENV_VALIDATION: "true"
       DATABASE_URL: "postgresql://postgres:postgres@localhost:5432/mercato_test"
@@ -25,13 +25,13 @@ jobs:
 
     steps:
       - name: Checkout repository
-        uses: actions/checkout@v4
+        uses: actions/checkout@v7
 
       - name: Install pnpm
-        uses: pnpm/action-setup@v4
+        uses: pnpm/action-setup@v6
 
       - name: Setup Node.js
-        uses: actions/setup-node@v4
+        uses: actions/setup-node@v7
         with:
           node-version: 24
           cache: "pnpm"
@@ -45,7 +45,7 @@ jobs:
       - name: Typecheck
         run: pnpm typecheck
 
-      - name: Run unit tests
+      - name: Run unit and integration tests
         run: pnpm test
 
       - name: Production build
