@@ -15,15 +15,19 @@
     "test:watch": "vitest",
     "db:generate": "drizzle-kit generate",
     "db:migrate": "drizzle-kit migrate",
+    "db:migrate:test": "drizzle-kit migrate --config=drizzle.test.config.ts",
     "db:push": "drizzle-kit push",
+    "db:seed": "tsx --env-file=.env.local src/lib/db/seed.ts",
     "db:studio": "drizzle-kit studio",
     "prepare": "husky"
   },
   "dependencies": {
+    "@better-auth/drizzle-adapter": "1.7.14",
     "@hookform/resolvers": "6.0.2",
     "@t3-oss/env-nextjs": "0.13.11",
     "@upstash/ratelimit": "2.2.0",
     "@upstash/redis": "1.40.0",
+    "better-auth": "1.7.14",
     "class-variance-authority": "0.7.1",
     "clsx": "2.1.1",
     "drizzle-orm": "0.45.4",
@@ -46,11 +50,13 @@
     "@types/pg": "8.23.1",
     "@types/react": "19.3.0",
     "@types/react-dom": "19.3.0",
+    "dotenv": "^18.0.9",
     "drizzle-kit": "0.31.11",
     "husky": "^9.1.7",
     "lint-staged": "^17.6.0",
     "pino-pretty": "13.2.0",
     "postcss": "8.5.32",
+    "tsx": "4.23.15",
     "typescript": "7.0.2",
     "vitest": "5.0.5"
   }
