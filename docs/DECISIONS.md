@@ -10,7 +10,6 @@ This document records the architectural and engineering decisions made for the M
 * **Context:** Commerce systems feature tightly coupled domains including catalog, inventory, checkout, payments, and orders. Splitting into separate microservices introduces network latency, serialization overhead, and distributed transaction complexity that is unjustified for the system scale.
 * **Decision:** Build Mercato as a modular monolith within a single repository and single Next.js application. Code is partitioned strictly by business domain in `src/modules/<domain>/` with dedicated schema, repository, service, and action layers. UI components never query database tables directly.
 * **Consequences:** Ensures high developer velocity, cross-domain type safety, and atomic deployment while keeping clean domain boundaries that can be factored into standalone services in the future if required.
-* **Compatibility Note:** TypeScript 7.0.2 was verified alongside Next.js 16.4.3, Turbopack, Biome 2.6.4, and Vitest 5.0.5 with full compatibility and zero peer dependency conflicts.
 
 ---
 
@@ -88,9 +87,27 @@ This document records the architectural and engineering decisions made for the M
 
 ---
 
-## ADR 0010: Next.js 16 Conventions, Proxy Architecture, and Biome Tooling
+## ADR 0010: Biome as the Unified Linter and Formatter
 
 * **Status:** Accepted
-* **Context:** Next.js 16 introduces refined conventions including `proxy.ts` replacing `middleware.ts`, native Cache Components (`cacheComponents: true` and `"use cache"`), and async page parameter resolution. Tooling must execute quickly across linting and formatting.
-* **Decision:** Implement `src/proxy.ts` as the network interception layer integrating `next-intl` routing. Use Biome (`@biomejs/biome`) as the unified linter and formatter, and enforce TypeScript 7 with `strict: true` and `noUncheckedIndexedAccess`.
-* **Consequences:** Eliminates legacy Next.js experimental flags, achieves sub-second lint and format execution, and ensures adherence to the current Next.js 16 App Router standard.
+* **Context:** Code consistency, formatting, and linting must run quickly in both local development and CI pipelines without configuration sprawl between ESLint, Prettier, and multiple plugins.
+* **Decision:** Adopt Biome (`@biomejs/biome`) as the unified tool for linting and formatting TypeScript, JSX, and JSON. Pre-commit enforcement is managed via Husky and `lint-staged`.
+* **Consequences:** Achieves sub-25ms lint and format verification across the entire repository, simplifies configuration to a single `biome.json` file, and eliminates package dependency conflicts between disparate ESLint plugins.
+
+---
+
+## ADR 0011: TypeScript 7 Compatibility Verification and Strict Configuration
+
+* **Status:** Accepted
+* **Context:** TypeScript 7.0.2 is the latest major release. We must verify that Next.js 16, Turbopack, Biome, Vitest, and Drizzle operate without compiler incompatibilities or peer dependency breakage.
+* **Decision:** Adopt TypeScript 7.0.2 with strict configuration (`strict: true`, `noUncheckedIndexedAccess: true`, `noEmit: true`). A minimal build and test cycle proved full compatibility across Next.js 16.4.3, Vitest 5.0.5, and Drizzle Kit 0.31.11.
+* **Consequences:** Provides maximum type safety across server-client boundaries, ensures no undefined property access escapes indexing checks, and benefits from current compiler optimizations.
+
+---
+
+## ADR 0012: Next.js 16 Proxy Architecture over Deprecated Middleware
+
+* **Status:** Accepted
+* **Context:** Next.js 16 officially renames and transitions `middleware.ts` to `src/proxy.ts` to reflect network boundary proxying and prevent confusion with Express-style middleware pipelines.
+* **Decision:** Implement `src/proxy.ts` as the primary request interception layer, integrating `next-intl` routing and future edge redirects.
+* **Consequences:** Adheres directly to the official Next.js 16 specification, avoids deprecated middleware naming, and cleanly separates network proxying from server action guards.

@@ -14,6 +14,14 @@ jobs:
   validate:
     name: Lint, Typecheck, Test, and Build
     runs-on: ubuntu-latest
+    env:
+      SKIP_ENV_VALIDATION: "true"
+      DATABASE_URL: "postgresql://postgres:postgres@localhost:5432/mercato_test"
+      UPSTASH_REDIS_REST_URL: "https://example-upstash.upstash.io"
+      UPSTASH_REDIS_REST_TOKEN: "sample_token_for_ci_pipeline"
+      BETTER_AUTH_SECRET: "ci_pipeline_dummy_better_auth_secret_32_chars_min"
+      BETTER_AUTH_URL: "http://localhost:3000"
+      NEXT_PUBLIC_APP_URL: "http://localhost:3000"
 
     steps:
       - name: Checkout repository
@@ -37,10 +45,8 @@ jobs:
       - name: Typecheck
         run: pnpm typecheck
 
-      - name: Run unit and integration tests
+      - name: Run unit tests
         run: pnpm test
 
       - name: Production build
-        env:
-          SKIP_ENV_VALIDATION: "true"
         run: pnpm build
