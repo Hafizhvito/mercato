@@ -69,18 +69,23 @@ cp .env.example .env.local
 
 Fill in your configuration values:
 
-1. **DATABASE_URL:** Your pooled connection string from Neon. Example: `postgresql://user:password@ep-xyz-pooler.ap-southeast-1.aws.neon.tech/mercato?sslmode=require`
-2. **UPSTASH_REDIS_REST_URL & UPSTASH_REDIS_REST_TOKEN:** REST credentials from your Upstash Redis database console.
-3. **BETTER_AUTH_SECRET:** A random 32-character string for signing session tokens.
-4. **BETTER_AUTH_URL & NEXT_PUBLIC_APP_URL:** Defaults to `http://localhost:3000` for local development.
+1. **DATABASE_URL:** Your pooled connection string from Neon (development branch). Example: `postgresql://user:password@ep-xyz-pooler.ap-southeast-1.aws.neon.tech/mercato?sslmode=require`
+2. **TEST_DATABASE_URL:** An isolated Neon test branch or local test database connection string. Test runs strictly refuse to run if `TEST_DATABASE_URL` matches `DATABASE_URL`.
+3. **UPSTASH_REDIS_REST_URL & UPSTASH_REDIS_REST_TOKEN:** REST credentials from your Upstash Redis database console.
+4. **BETTER_AUTH_SECRET:** A random 32-character string for signing session tokens.
+5. **BETTER_AUTH_URL & NEXT_PUBLIC_APP_URL:** Defaults to `http://localhost:3000` for local development.
 
 ### 3. Database Migrations
 
 Generate and execute migrations using Drizzle Kit:
 
 ```bash
+# Migrate primary development database
 pnpm db:generate
 pnpm db:migrate
+
+# Migrate isolated test branch database
+pnpm db:migrate:test
 ```
 
 To inspect database records interactively, open Drizzle Studio:

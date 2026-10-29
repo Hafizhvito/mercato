@@ -4,6 +4,7 @@ import { admin, twoFactor } from "better-auth/plugins";
 import { createAccessControl } from "better-auth/plugins/access";
 import { db } from "@/lib/db";
 import * as schema from "@/lib/db/schema";
+import { emailService } from "@/lib/email";
 import { env } from "@/lib/env";
 
 const ac = createAccessControl({});
@@ -28,9 +29,28 @@ export const auth = betterAuth({
       twoFactor: schema.twoFactor,
     },
   }),
+  emailVerification: {
+    sendOnSignUp: false,
+    sendVerificationEmail: async ({ user, url, token }) => {
+      await emailService.sendVerificationEmail({
+        to: user.email,
+        url,
+        token,
+        userName: user.name,
+      });
+    },
+  },
   emailAndPassword: {
     enabled: true,
     requireEmailVerification: false,
+    sendResetPassword: async ({ user, url, token }) => {
+      await emailService.sendPasswordResetEmail({
+        to: user.email,
+        url,
+        token,
+        userName: user.name,
+      });
+    },
   },
   socialProviders: {
     ...(env.GOOGLE_CLIENT_ID && env.GOOGLE_CLIENT_SECRET

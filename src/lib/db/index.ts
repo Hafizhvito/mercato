@@ -7,10 +7,15 @@ const globalForDb = globalThis as unknown as {
   pool: Pool | undefined;
 };
 
+const connectionString =
+  (process.env.NODE_ENV === "test" || env.NODE_ENV === "test") && process.env.TEST_DATABASE_URL
+    ? process.env.TEST_DATABASE_URL
+    : env.DATABASE_URL;
+
 export const pool =
   globalForDb.pool ??
   new Pool({
-    connectionString: env.DATABASE_URL,
+    connectionString,
     max: env.NODE_ENV === "production" ? 20 : 5,
     idleTimeoutMillis: 30000,
     connectionTimeoutMillis: 5000,

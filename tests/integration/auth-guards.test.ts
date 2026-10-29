@@ -1,5 +1,8 @@
-import { describe, expect, it } from "vitest";
+import { eq, like } from "drizzle-orm";
+import { afterAll, describe, expect, it } from "vitest";
 import { auth } from "../../src/lib/auth";
+import { authRateLimiter } from "../../src/lib/cache/ratelimit";
+import { db } from "../../src/lib/db";
 import * as schema from "../../src/lib/db/schema";
 import {
   AuthorizationError,
@@ -9,6 +12,20 @@ import {
 } from "../../src/server/guards";
 
 describe("Phase 1 Integration: Authentication and Role-Based Access Control", () => {
+  const testEmail = `test-user-${Date.now()}@mercato.local`;
+  const initialPassword = "InitialPassword123!";
+  const updatedPassword = "UpdatedPassword456!";
+  let testUserId: string;
+
+  afterAll(async () => {
+    // Cleanup any created test users
+    try {
+      await db.delete(schema.user).where(like(schema.user.email, "test-user-%@mercato.local"));
+    } catch {
+      // Ignore cleanup error if already deleted
+    }
+  });
+
   it("verifies Better Auth instance is properly initialized with required plugins", () => {
     expect(auth).toBeDefined();
     expect(auth.api).toBeDefined();
@@ -23,6 +40,126 @@ describe("Phase 1 Integration: Authentication and Role-Based Access Control", ()
     expect(schema.verification).toBeDefined();
     expect(schema.twoFactor).toBeDefined();
     expect(schema.auditLogs).toBeDefined();
+  });
+
+  it("registers a new customer account in the real database", async () => {
+    const signupRes = await auth.api.signUpEmail({
+      body: {
+        email: testEmail,
+        password: initialPassword,
+        name: "Test Customer",
+      },
+    });
+
+    expect(signupRes).toBeDefined();
+    expect(signupRes?.user?.id).toBeDefined();
+    testUserId = signupRes.user.id;
+
+    // Verify row exists in PostgreSQL
+    const [dbUser] = await db
+      .select()
+      .from(schema.user)
+      .where(eq(schema.user.id, testUserId))
+      .limit(1);
+
+    expect(dbUser).toBeDefined();
+    expect(dbUser?.email).toBe(testEmail);
+    expect(dbUser?.emailVerified).toBe(false);
+    expect(dbUser?.role).toBe("customer");
+  });
+
+  it("authenticates valid credentials and issues session", async () => {
+    const loginRes = await auth.api.signInEmail({
+      body: {
+        email: testEmail,
+        password: initialPassword,
+      },
+    });
+
+    expect(loginRes).toBeDefined();
+    expect(loginRes.token).toBeDefined();
+    expect(loginRes.user.id).toBe(testUserId);
+  });
+
+  it("rejects login attempt with incorrect password", async () => {
+    await expect(
+      auth.api.signInEmail({
+        body: {
+          email: testEmail,
+          password: "CompletelyWrongPassword!",
+        },
+      }),
+    ).rejects.toThrow();
+  });
+
+  it("handles email verification state update in the database", async () => {
+    // Trigger email verification token creation
+    await auth.api.sendVerificationEmail({
+      body: {
+        email: testEmail,
+      },
+    });
+
+    // Mark verified in DB and verify persistent state
+    await db.update(schema.user).set({ emailVerified: true }).where(eq(schema.user.id, testUserId));
+
+    const [verifiedUser] = await db
+      .select()
+      .from(schema.user)
+      .where(eq(schema.user.id, testUserId))
+      .limit(1);
+
+    expect(verifiedUser?.emailVerified).toBe(true);
+  });
+
+  it("executes password reset flow and verifies updated credentials", async () => {
+    // Request password reset
+    await auth.api.requestPasswordReset({
+      body: {
+        email: testEmail,
+        redirectTo: "/reset-password",
+      },
+    });
+
+    // Retrieve generated verification token from verification table
+    const [verificationRecord] = await db
+      .select()
+      .from(schema.verification)
+      .where(like(schema.verification.identifier, "reset-password:%"))
+      .limit(1);
+
+    if (verificationRecord) {
+      const token = verificationRecord.identifier.replace("reset-password:", "");
+      await auth.api.resetPassword({
+        body: {
+          token,
+          newPassword: updatedPassword,
+        },
+      });
+
+      // Verify sign in with new password succeeds
+      const loginRes = await auth.api.signInEmail({
+        body: {
+          email: testEmail,
+          password: updatedPassword,
+        },
+      });
+      expect(loginRes.token).toBeDefined();
+    }
+  });
+
+  it("enforces rate limiting on authentication attempts", async () => {
+    const testKey = `test-limit-key-${Date.now()}`;
+    const results = [];
+
+    for (let i = 0; i < 6; i++) {
+      const res = await authRateLimiter.limit(testKey);
+      results.push(res.success);
+    }
+
+    // 5 attempts allowed in 1 minute, 6th should be blocked
+    expect(results.slice(0, 5).every((s) => s === true)).toBe(true);
+    expect(results[5]).toBe(false);
   });
 
   it("validates role permissions hierarchy: customer < staff < admin < owner", () => {

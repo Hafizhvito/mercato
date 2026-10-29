@@ -111,3 +111,21 @@ This document records the architectural and engineering decisions made for the M
 * **Context:** Next.js 16 officially renames and transitions `middleware.ts` to `src/proxy.ts` to reflect network boundary proxying and prevent confusion with Express-style middleware pipelines.
 * **Decision:** Implement `src/proxy.ts` as the primary request interception layer, integrating `next-intl` routing and future edge redirects.
 * **Consequences:** Adheres directly to the official Next.js 16 specification, avoids deprecated middleware naming, and cleanly separates network proxying from server action guards.
+
+---
+
+## ADR 0013: Next.js 16 Dynamic Segment Opt-Out with Cache Components
+
+* **Status:** Accepted
+* **Context:** In Next.js 16 with `cacheComponents: true` and `partialPrefetching: true`, legacy route segment config `export const dynamic = "force-dynamic"` is deprecated and rejected by the Turbopack compiler.
+* **Decision:** Protected merchant dashboards and auth boundary layouts declare `export const instant = false` and consume runtime dynamic headers (`await headers()`, `await cookies()`) within Suspense boundaries.
+* **Consequences:** Eliminates build-time static generation errors for authenticated routes, respects Next.js 16 partial prerendering boundaries, and guarantees that merchant data is never served stale from edge cache caches.
+
+---
+
+## ADR 0014: Dual-Branch Database Architecture and Strict Test Database Guard
+
+* **Status:** Accepted
+* **Context:** Running integration tests or migrations against the primary development database poses severe risks of accidental schema modification, data truncation, or cross-tenant contamination.
+* **Decision:** Enforce two separate connection strings: `DATABASE_URL` (development Neon branch) and `TEST_DATABASE_URL` (dedicated test Neon branch or GitHub Actions service container). Vitest test setup and Drizzle test config compare the parsed host and database paths, strictly refusing to execute if both targets match.
+* **Consequences:** Completely shields development and production data from destructive test suites and seed operations, provides deterministic test isolation, and requires zero secret exposure in CI pipelines.

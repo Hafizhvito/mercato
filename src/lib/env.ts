@@ -5,6 +5,11 @@ export const env = createEnv({
   server: {
     NODE_ENV: z.enum(["development", "test", "production"]).default("development"),
     DATABASE_URL: z.string().url().describe("Neon PostgreSQL connection string"),
+    TEST_DATABASE_URL: z
+      .string()
+      .url()
+      .optional()
+      .describe("Neon PostgreSQL test branch connection string"),
     UPSTASH_REDIS_REST_URL: z.string().url().describe("Upstash Redis REST endpoint"),
     UPSTASH_REDIS_REST_TOKEN: z.string().min(1).describe("Upstash Redis REST token"),
     BETTER_AUTH_SECRET: z.string().min(16).describe("Better Auth secret key"),
@@ -34,6 +39,7 @@ export const env = createEnv({
   runtimeEnv: {
     NODE_ENV: process.env.NODE_ENV,
     DATABASE_URL: process.env.DATABASE_URL,
+    TEST_DATABASE_URL: process.env.TEST_DATABASE_URL,
     UPSTASH_REDIS_REST_URL: process.env.UPSTASH_REDIS_REST_URL,
     UPSTASH_REDIS_REST_TOKEN: process.env.UPSTASH_REDIS_REST_TOKEN,
     BETTER_AUTH_SECRET: process.env.BETTER_AUTH_SECRET,
