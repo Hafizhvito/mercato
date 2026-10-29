@@ -1,0 +1,16 @@
+{
+  "common": {
+    "brand": "Mercato",
+    "search": "Search products...",
+    "cart": "Cart",
+    "account": "Account",
+    "signIn": "Sign In",
+    "signOut": "Sign Out"
+  },
+  "nav": {
+    "home": "Home",
+    "catalog": "Catalog",
+    "collections": "Collections",
+    "about": "About"
+  }
+}

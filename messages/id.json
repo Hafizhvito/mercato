@@ -1,0 +1,16 @@
+{
+  "common": {
+    "brand": "Mercato",
+    "search": "Cari produk...",
+    "cart": "Keranjang",
+    "account": "Akun",
+    "signIn": "Masuk",
+    "signOut": "Keluar"
+  },
+  "nav": {
+    "home": "Beranda",
+    "catalog": "Katalog",
+    "collections": "Koleksi",
+    "about": "Tentang Kami"
+  }
+}
