@@ -149,7 +149,7 @@ describe("Phase 1 Integration: Authentication and Role-Based Access Control", ()
   });
 
   it("enforces rate limiting on authentication attempts", async () => {
-    const testKey = `test-limit-key-${Date.now()}`;
+    const testKey = `test-limit-key-${crypto.randomUUID()}`;
     const results = [];
 
     for (let i = 0; i < 6; i++) {

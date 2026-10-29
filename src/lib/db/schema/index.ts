@@ -116,3 +116,6 @@ export type Account = typeof account.$inferSelect;
 export type Verification = typeof verification.$inferSelect;
 export type TwoFactor = typeof twoFactor.$inferSelect;
 export type AuditLog = typeof auditLogs.$inferSelect;
+
+// Catalog Domain Schema
+export * from "@/modules/catalog/schema";

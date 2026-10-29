@@ -19,10 +19,13 @@
     "db:migrate:test": "drizzle-kit migrate --config=drizzle.test.config.ts",
     "db:push": "drizzle-kit push",
     "db:seed": "tsx --env-file=.env.local src/lib/db/seed.ts",
+    "db:seed:catalog": "tsx --env-file=.env.local src/lib/db/seed-catalog.ts",
     "db:studio": "drizzle-kit studio",
     "prepare": "husky"
   },
   "dependencies": {
+    "@aws-sdk/client-s3": "3.1160.0",
+    "@aws-sdk/s3-request-presigner": "3.1160.0",
     "@better-auth/drizzle-adapter": "1.7.14",
     "@hookform/resolvers": "6.0.2",
     "@t3-oss/env-nextjs": "0.13.11",

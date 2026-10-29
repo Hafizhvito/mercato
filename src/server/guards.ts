@@ -3,8 +3,8 @@ export type UserRole = "customer" | "staff" | "admin" | "owner";
 export interface SessionUser {
   id: string;
   email: string;
-  role: UserRole;
-  storeId?: string;
+  role?: UserRole | string | null;
+  storeId?: string | null;
 }
 
 export class AuthorizationError extends Error {
@@ -24,12 +24,13 @@ const ROLE_HIERARCHY: Record<UserRole, number> = {
 export function assertRole(
   user: SessionUser | null | undefined,
   minimumRole: UserRole,
-): asserts user is SessionUser {
-  if (!user) {
+): asserts user is SessionUser & { role: UserRole } {
+  if (!user?.role) {
     throw new AuthorizationError("Authentication required");
   }
 
-  const userRank = ROLE_HIERARCHY[user.role] ?? 0;
+  const role = user.role as UserRole;
+  const userRank = ROLE_HIERARCHY[role] ?? 0;
   const requiredRank = ROLE_HIERARCHY[minimumRole] ?? 0;
 
   if (userRank < requiredRank) {
