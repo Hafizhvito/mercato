@@ -39,9 +39,29 @@ export class StripePaymentProvider implements PaymentProvider {
   }
 
   /**
-   * Converts Mercato minor currency units to Stripe API amounts.
-   * Stripe treats IDR as having 2 decimal places (multiply by 100).
-   * For standard 2-decimal currencies (USD, SGD), Mercato is already in minor units (cents).
+   * Converts Mercato integer currency units to Stripe API amounts.
+   *
+   * Official Stripe Documentation Reference:
+   * URL: https://docs.stripe.com/currencies
+   * Section: "Zero-decimal currencies" & "Minimum and maximum charge amounts"
+   *
+   * Official Statement:
+   * "All API requests expect amounts to be provided in a currency’s smallest unit.
+   * For example, to charge 10 USD, provide an amount value of 1000 (that is, 1000 cents)."
+   *
+   * Under Zero-decimal currencies:
+   * Stripe explicitly lists zero-decimal currencies:
+   * BIF, CLP, DJF, GNF, JPY, KMF, KRW, MGA, PYG, RWF, UGX, VND, VUV, XAF, XOF, XPF.
+   * IDR (Indonesian Rupiah) is NOT listed among zero-decimal currencies.
+   *
+   * Under Minimum and maximum charge amounts:
+   * "For non-card payment methods, the amount value supports up to 12 digits for IDR
+   * (for example, a value of 999999999999 for 9,999,999,999.99 IDR)."
+   * "Minimum charge amount is equivalent to 0.50 IDR" (i.e. integer value 50 in API).
+   *
+   * Because Mercato represents IDR as whole Rupiah (e.g. 150000 = Rp 150.000)
+   * while Stripe expects two decimal places for IDR, we multiply by 100 when
+   * communicating with Stripe, and divide by 100 when receiving amounts from Stripe.
    */
   toStripeAmount(amountMinor: number, currency: string): number {
     const cur = currency.toUpperCase();
@@ -52,7 +72,7 @@ export class StripePaymentProvider implements PaymentProvider {
   }
 
   /**
-   * Converts Stripe amounts back to Mercato integer minor units.
+   * Converts Stripe API amounts back to Mercato integer currency units.
    */
   fromStripeAmount(stripeAmount: number, currency: string): number {
     const cur = currency.toUpperCase();
