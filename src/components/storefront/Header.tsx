@@ -1,5 +1,8 @@
+"use client";
+
 import { ShoppingBag } from "lucide-react";
 import Link from "next/link";
+import { useTranslations } from "next-intl";
 import { SearchBar } from "./SearchBar";
 
 interface StorefrontHeaderProps {
@@ -7,26 +10,29 @@ interface StorefrontHeaderProps {
 }
 
 export function StorefrontHeader({ locale = "id" }: StorefrontHeaderProps) {
+  const tCommon = useTranslations("common");
+  const tNav = useTranslations("nav");
+
   return (
     <header className="sticky top-0 z-40 border-b border-zinc-200 bg-white/80 backdrop-blur-md">
       <div className="mx-auto flex h-16 max-w-7xl items-center justify-between gap-4 px-4 sm:px-6 lg:px-8">
         {/* Brand Logo & Main Nav */}
         <div className="flex items-center gap-8">
           <Link href={`/${locale}`} className="text-xl font-bold tracking-tight text-zinc-950">
-            Mercato
+            {tCommon("brand")}
           </Link>
           <nav className="hidden md:flex items-center gap-6 text-sm font-medium text-zinc-600">
             <Link href={`/${locale}`} className="hover:text-zinc-950 transition-colors">
-              {locale === "id" ? "Beranda" : "Home"}
+              {tNav("home")}
             </Link>
             <Link href={`/${locale}/catalog`} className="hover:text-zinc-950 transition-colors">
-              {locale === "id" ? "Katalog" : "Catalog"}
+              {tNav("catalog")}
             </Link>
             <Link
               href={`/${locale}/catalog?collection=featured`}
               className="hover:text-zinc-950 transition-colors"
             >
-              {locale === "id" ? "Unggulan" : "Featured"}
+              {tNav("featured")}
             </Link>
           </nav>
         </div>
@@ -43,7 +49,7 @@ export function StorefrontHeader({ locale = "id" }: StorefrontHeaderProps) {
             className="flex items-center gap-1.5 rounded-lg border border-zinc-200 bg-white px-3 py-1.5 text-xs font-semibold text-zinc-900 hover:bg-zinc-50"
           >
             <ShoppingBag className="h-3.5 w-3.5" />
-            <span>{locale === "id" ? "Keranjang" : "Cart"}</span>
+            <span>{tCommon("cart")}</span>
           </Link>
           <Link
             href={locale === "id" ? "/en" : "/id"}
@@ -55,7 +61,7 @@ export function StorefrontHeader({ locale = "id" }: StorefrontHeaderProps) {
             href="/admin/dashboard"
             className="text-xs font-medium text-zinc-600 hover:text-zinc-900 border-l border-zinc-200 pl-4"
           >
-            Merchant Admin
+            {tCommon("merchantAdmin")}
           </Link>
         </div>
       </div>

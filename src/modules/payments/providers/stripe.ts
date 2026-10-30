@@ -27,7 +27,6 @@ export class StripePaymentProvider implements PaymentProvider {
         throw new Error("Stripe secret key is not configured.");
       }
       this.stripeClient = new Stripe(this.secretKey, {
-        apiVersion: "2026-03-23.acacia" as any,
         typescript: true,
       });
     }

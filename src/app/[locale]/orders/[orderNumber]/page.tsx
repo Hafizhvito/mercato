@@ -38,8 +38,6 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
   };
 }
 
-export const instant = false;
-
 export default async function OrderConfirmationPage({ params, searchParams }: Props) {
   const { locale, orderNumber } = await params;
   const { token } = (await searchParams) ?? {};
@@ -67,9 +65,7 @@ export default async function OrderConfirmationPage({ params, searchParams }: Pr
 
   const statusLabel =
     order.paymentStatus === "needs_review"
-      ? locale === "id"
-        ? "Menunggu Peninjauan Manual"
-        : "Needs Manual Review"
+      ? t("statusNeedsReview")
       : order.status === "awaiting_payment"
         ? t("statusAwaitingPayment")
         : order.status === "paid"
@@ -155,23 +151,23 @@ export default async function OrderConfirmationPage({ params, searchParams }: Pr
               {/* Order Calculations */}
               <div className="border-t border-zinc-200 pt-4 space-y-2 text-xs">
                 <div className="flex justify-between text-zinc-600">
-                  <span>Subtotal</span>
+                  <span>{t("subtotal")}</span>
                   <span className="font-medium text-zinc-900">{formattedSubtotal}</span>
                 </div>
                 <div className="flex justify-between text-zinc-600">
                   <span>
-                    Shipping ({order.shippingCarrier} - {order.shippingService})
+                    {t("shipping")} ({order.shippingCarrier} - {order.shippingService})
                   </span>
                   <span className="font-medium text-zinc-900">{formattedShipping}</span>
                 </div>
                 {order.discountAmount > 0 && (
                   <div className="flex justify-between text-emerald-700 font-medium">
-                    <span>Discount</span>
+                    <span>{t("discount")}</span>
                     <span>-{formattedDiscount}</span>
                   </div>
                 )}
                 <div className="border-t border-zinc-200 pt-3 flex justify-between text-sm font-bold text-zinc-950">
-                  <span>Total</span>
+                  <span>{t("total")}</span>
                   <span>{formattedTotal}</span>
                 </div>
               </div>

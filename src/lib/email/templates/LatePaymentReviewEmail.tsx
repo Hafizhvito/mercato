@@ -10,6 +10,7 @@ import {
   Section,
   Text,
 } from "@react-email/components";
+import { getEmailTranslations } from "../messages";
 
 interface LatePaymentReviewEmailProps {
   orderNumber: string;
@@ -24,16 +25,16 @@ export function LatePaymentReviewEmail({
   orderUrl,
   locale = "id",
 }: LatePaymentReviewEmailProps) {
-  const isId = locale === "id";
+  const t = getEmailTranslations(locale);
+  const preview = t.latePaymentReview.preview.replace("{orderNumber}", orderNumber);
+  const desc = t.latePaymentReview.description
+    .replace("{amount}", totalAmountFormatted)
+    .replace("{orderNumber}", `#${orderNumber}`);
 
   return (
     <Html>
       <Head />
-      <Preview>
-        {isId
-          ? `Pemberitahuan Pesanan #${orderNumber} - Mercato`
-          : `Order Notice #${orderNumber} - Mercato`}
-      </Preview>
+      <Preview>{preview}</Preview>
       <Body style={{ backgroundColor: "#f9fafb", fontFamily: "sans-serif", padding: "20px 0" }}>
         <Container
           style={{
@@ -46,32 +47,12 @@ export function LatePaymentReviewEmail({
           <Heading
             style={{ fontSize: "20px", fontWeight: "bold", color: "#18181b", marginBottom: "8px" }}
           >
-            {isId ? "Status Pembayaran Pesanan Anda" : "Payment Status Notice"}
+            {t.latePaymentReview.heading}
           </Heading>
+          <Text style={{ fontSize: "14px", color: "#52525b", lineHeight: "22px" }}>{desc}</Text>
           <Text style={{ fontSize: "14px", color: "#52525b", lineHeight: "22px" }}>
-            {isId ? (
-              <>
-                Kami telah menerima pembayaran sebesar{" "}
-                <strong style={{ color: "#18181b" }}>{totalAmountFormatted}</strong> untuk pesanan{" "}
-                <strong>#{orderNumber}</strong>. Namun, karena pembayaran selesai setelah batas
-                waktu reservasi berakhir, pesanan Anda saat ini sedang dalam peninjauan oleh tim
-                kami.
-              </>
-            ) : (
-              <>
-                We have received your payment of{" "}
-                <strong style={{ color: "#18181b" }}>{totalAmountFormatted}</strong> for order{" "}
-                <strong>#{orderNumber}</strong>. However, because payment was completed after the
-                reservation window expired, your order has been placed on hold for manual review.
-              </>
-            )}
+            {t.latePaymentReview.resolution}
           </Text>
-          <Text style={{ fontSize: "14px", color: "#52525b", lineHeight: "22px" }}>
-            {isId
-              ? "Tim kami akan memeriksa ketersediaan inventaris dan segera menghubungi Anda atau memproses pengembalian dana jika stok tidak tersedia."
-              : "Our team will verify stock availability and contact you shortly with an update or issue a refund if stock cannot be fulfilled."}
-          </Text>
-          <Hr style={{ borderColor: "#e4e4e7", margin: "20px 0" }} />
           {orderUrl && (
             <Section style={{ textAlign: "center", margin: "24px 0" }}>
               <Button
@@ -86,10 +67,14 @@ export function LatePaymentReviewEmail({
                   textDecoration: "none",
                 }}
               >
-                {isId ? "Lihat Detail Pesanan" : "View Order Details"}
+                {t.latePaymentReview.viewOrder}
               </Button>
             </Section>
           )}
+          <Hr style={{ borderColor: "#e4e4e7", margin: "20px 0" }} />
+          <Text style={{ fontSize: "12px", color: "#a1a1aa", marginTop: "16px" }}>
+            {t.common.rights}
+          </Text>
         </Container>
       </Body>
     </Html>

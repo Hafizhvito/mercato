@@ -58,6 +58,6 @@ async function main() {
   }
 }
 
-if (process.argv[1] && process.argv[1].includes("import-indonesian-regions")) {
+if (process.argv[1]?.includes("import-indonesian-regions")) {
   main();
 }

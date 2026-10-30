@@ -5,7 +5,9 @@ import { unstable_cache as cache } from "next/cache";
 import { db } from "@/lib/db";
 import * as schema from "@/lib/db/schema";
 
-function safeCache<T extends (...args: any[]) => Promise<any>>(
+type CacheCallback = Parameters<typeof cache>[0];
+
+function safeCache<T extends CacheCallback>(
   fn: T,
   keyParts: string[],
   options?: { revalidate?: number | false; tags?: string[] },
@@ -13,7 +15,7 @@ function safeCache<T extends (...args: any[]) => Promise<any>>(
   if (process.env.NODE_ENV === "test") {
     return fn;
   }
-  return cache(fn, keyParts, options) as T;
+  return cache(fn, keyParts, options) as unknown as T;
 }
 
 export async function getProvinces() {

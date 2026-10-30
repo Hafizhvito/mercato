@@ -2,6 +2,10 @@
   "common": {
     "brand": "Mercato",
     "search": "Cari produk...",
+    "searchPlaceholder": "Cari produk, kategori, atau koleksi...",
+    "viewAllResults": "Lihat semua hasil untuk \"{query}\"",
+    "merchantAdmin": "Admin Toko",
+    "languageSwitch": "Indonesia",
     "cart": "Keranjang",
     "account": "Akun",
     "signIn": "Masuk",
@@ -12,7 +16,19 @@
     "home": "Beranda",
     "catalog": "Katalog",
     "collections": "Koleksi",
+    "featured": "Unggulan",
     "about": "Tentang Kami"
+  },
+  "product": {
+    "outOfStock": "Stok Habis",
+    "inStock": "Stok Tersedia",
+    "lowStock": "Tersisa {stock} item lagi!",
+    "selectVariant": "Pilihan Varian:",
+    "addToCart": "Tambah ke Keranjang",
+    "adding": "Menambahkan...",
+    "addedSuccess": "Berhasil menambahkan {quantity} item ke keranjang!",
+    "viewCart": "Lihat Keranjang →",
+    "category": "Kategori:"
   },
   "cart": {
     "title": "Keranjang Belanja",
@@ -77,12 +93,107 @@
     "statusDelivered": "Telah Diterima",
     "statusCancelled": "Dibatalkan",
     "statusRefunded": "Dana Dikembalikan",
+    "statusNeedsReview": "Dalam Peninjauan",
     "purchasedItems": "Rincian Produk",
     "shippingDestination": "Tujuan Pengiriman",
     "paymentSummary": "Ringkasan Pembayaran",
     "timeline": "Riwayat Status Pesanan",
     "timelineInitial": "Pesanan dibuat saat checkout",
     "payNow": "Bayar Sekarang",
-    "continueShopping": "Lanjut Belanja"
+    "continueShopping": "Lanjut Belanja",
+    "subtotal": "Subtotal",
+    "shipping": "Ongkos Kirim",
+    "discount": "Diskon Kupon",
+    "total": "Total",
+    "viewOrder": "Lihat Detail Pesanan",
+    "retryPayment": "Coba Bayar Lagi",
+    "checkStatus": "Cek Status Pesanan",
+    "backToCatalog": "Kembali ke Katalog",
+    "paymentSuccessTitle": "Pembayaran Berhasil!",
+    "paymentSuccessDesc": "Terima kasih! Pembayaran Anda telah kami terima dan pesanan Anda sedang disiapkan oleh tim logistik kami.",
+    "paymentFailedTitle": "Pembayaran Tidak Berhasil",
+    "paymentFailedDesc": "Transaksi pembayaran Anda dibatalkan atau tidak dapat diselesaikan. Jangan khawatir, pesanan Anda masih tersimpan.",
+    "paymentPendingTitle": "Menunggu Pembayaran",
+    "paymentPendingDesc": "Transaksi Anda sedang diproses atau menunggu transfer. Silakan selesaikan pembayaran sesuai instruksi penyedia pembayaran Anda."
+  },
+  "payment": {
+    "title": "Selesaikan Pembayaran",
+    "description": "Pesanan Anda telah dicatat. Silakan pilih metode pembayaran yang aman di bawah ini untuk menyelesaikan transaksi.",
+    "orderUnderReview": "Pesanan Dalam Peninjauan",
+    "orderUnderReviewDesc": "Pembayaran Anda telah diterima, namun pesanan ini membutuhkan verifikasi ketersediaan stok oleh admin kami. Tim kami akan segera menghubungi Anda.",
+    "noProvidersTitle": "Kanal Pembayaran Belum Tersedia",
+    "noProvidersDesc": "Saat ini belum ada gateway pembayaran yang aktif. Silakan hubungi admin toko untuk bantuan pembayaran pesanan Anda.",
+    "checkStatus": "Periksa Status Pembayaran",
+    "checkingStatus": "Memeriksa Status...",
+    "checkUpdates": "Periksa Pembaruan Status",
+    "payNow": "Bayar Sekarang ({amount})",
+    "connecting": "Menghubungkan ke Pembayaran...",
+    "securityNotice": "Transaksi diamankan dengan enkripsi 256-bit standar PCI-DSS.",
+    "redirectError": "Tidak dapat mengarahkan ke halaman pembayaran. Silakan coba lagi.",
+    "statusCheckSuccess": "Status terkini: {status} (Pembayaran: {paymentStatus})",
+    "statusCheckFailed": "Pemeriksaan status gagal",
+    "sessionFailed": "Pembuatan sesi pembayaran gagal",
+    "midtrans": {
+      "name": "Midtrans Snap",
+      "badge": "Populer di Indonesia",
+      "desc": "QRIS, GoPay, ShopeePay, Virtual Account BCA/Mandiri/BNI/BRI"
+    },
+    "stripe": {
+      "name": "Stripe Checkout",
+      "badge": "Global",
+      "desc": "Visa, Mastercard, American Express, JCB (Hosted 3DS2)"
+    }
+  },
+  "emails": {
+    "common": {
+      "rights": "Mercato E-Commerce Platform. Hak cipta dilindungi undang-undang.",
+      "customerFallback": "Pelanggan Setia"
+    },
+    "verification": {
+      "preview": "Verifikasi alamat email akun Mercato Anda",
+      "heading": "Selamat Datang di Mercato",
+      "greeting": "Halo {name},",
+      "description": "Silakan klik tombol di bawah untuk memverifikasi alamat email Anda dan mengaktifkan akun Mercato Anda.",
+      "button": "Verifikasi Email Saya",
+      "expiryNotice": "Tautan ini akan kedaluwarsa dalam 24 jam. Jika Anda tidak pernah membuat akun, Anda dapat mengabaikan email ini."
+    },
+    "passwordReset": {
+      "preview": "Atur ulang kata sandi akun Mercato Anda",
+      "heading": "Atur Ulang Kata Sandi",
+      "greeting": "Halo {name},",
+      "description": "Kami menerima permintaan pengaturan ulang kata sandi akun Mercato Anda. Klik tombol di bawah untuk membuat kata sandi baru.",
+      "button": "Atur Ulang Kata Sandi",
+      "expiryNotice": "Tautan ini akan kedaluwarsa dalam 1 jam. Jika Anda tidak meminta pengaturan ulang kata sandi, abaikan email ini atau hubungi bantuan."
+    },
+    "orderConfirmation": {
+      "preview": "Konfirmasi Pesanan #{orderNumber} - Mercato",
+      "heading": "Konfirmasi Pesanan",
+      "description": "Terima kasih atas pesanan Anda! Kami telah menerima pesanan #{orderNumber}.",
+      "totalAmount": "Total Pembayaran:",
+      "viewOrder": "Lihat Detail Pesanan"
+    },
+    "paymentReceived": {
+      "preview": "Pembayaran Diterima untuk Pesanan #{orderNumber} - Mercato",
+      "heading": "Pembayaran Dikonfirmasi",
+      "description": "Kami telah berhasil menerima pembayaran untuk pesanan #{orderNumber}. Pesanan Anda sedang diproses oleh tim gudang kami.",
+      "amountPaid": "Jumlah Dibayar:",
+      "paymentMethod": "Metode Pembayaran:",
+      "viewOrder": "Lihat Status Pesanan"
+    },
+    "orderShipped": {
+      "preview": "Pesanan Mercato Anda #{orderNumber} Telah Dikirim!",
+      "heading": "Pesanan Anda Sedang Dalam Perjalanan!",
+      "description": "Kabar gembira! Pesanan #{orderNumber} telah dikirim dan sedang dalam perjalanan menuju alamat tujuan Anda.",
+      "carrier": "Kurir:",
+      "trackingNumber": "Nomor Resi:",
+      "trackPackage": "Lacak Pengiriman"
+    },
+    "latePaymentReview": {
+      "preview": "Pemberitahuan Pesanan #{orderNumber} - Mercato",
+      "heading": "Status Pembayaran Pesanan Anda",
+      "description": "Kami telah menerima pembayaran sebesar {amount} untuk pesanan #{orderNumber}. Namun, karena pembayaran selesai setelah batas waktu reservasi berakhir, pesanan Anda saat ini sedang dalam peninjauan oleh tim kami.",
+      "resolution": "Tim layanan pelanggan kami sedang memeriksa ketersediaan stok fisik di gudang. Jika stok masih tersedia, pesanan Anda akan segera diproses. Jika stok telah habis, kami akan menghubungi Anda untuk penukaran atau pengembalian dana penuh.",
+      "viewOrder": "Lihat Status Pesanan"
+    }
   }
 }

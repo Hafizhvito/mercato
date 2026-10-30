@@ -1,5 +1,6 @@
 import { AlertOctagon, ArrowLeft, RotateCcw } from "lucide-react";
 import Link from "next/link";
+import { getTranslations } from "next-intl/server";
 import { Header } from "@/components/storefront/Header";
 
 interface Props {
@@ -11,15 +12,14 @@ interface Props {
   }>;
 }
 
-export const instant = false;
-
 export default async function CheckoutFailedPage({ params, searchParams }: Props) {
   const { locale } = await params;
   const search = await searchParams;
   const orderNumber = search.orderNumber || search.order_id || "";
   const token = search.token || "";
 
-  const isId = locale === "id";
+  const tOrder = await getTranslations({ locale, namespace: "order" });
+  const tCheckout = await getTranslations({ locale, namespace: "checkout" });
 
   return (
     <div className="min-h-screen bg-zinc-50 flex flex-col">
@@ -31,20 +31,16 @@ export default async function CheckoutFailedPage({ params, searchParams }: Props
             <AlertOctagon className="h-10 w-10" />
           </div>
 
-          <h1 className="text-2xl font-black text-zinc-950">
-            {isId ? "Pembayaran Tidak Berhasil" : "Payment Incomplete"}
-          </h1>
+          <h1 className="text-2xl font-black text-zinc-950">{tOrder("paymentFailedTitle")}</h1>
 
           <p className="mt-3 text-sm text-zinc-600 leading-relaxed">
-            {isId
-              ? "Transaksi pembayaran Anda dibatalkan atau tidak dapat diselesaikan. Jangan khawatir, pesanan Anda masih tersimpan."
-              : "Your payment was cancelled or could not be completed. Don't worry, your order reservation is still saved."}
+            {tOrder("paymentFailedDesc")}
           </p>
 
           {orderNumber && (
             <div className="mt-6 p-4 rounded-xl bg-zinc-50 border border-zinc-200 text-xs">
               <span className="text-zinc-500 uppercase tracking-wider font-semibold">
-                {isId ? "Nomor Pesanan" : "Order Number"}
+                {tOrder("orderNumber")}
               </span>
               <p className="mt-1 text-base font-bold text-zinc-950 font-mono">#{orderNumber}</p>
             </div>
@@ -57,7 +53,7 @@ export default async function CheckoutFailedPage({ params, searchParams }: Props
                 className="w-full inline-flex items-center justify-center gap-2 rounded-xl bg-indigo-600 py-3 px-4 text-xs font-semibold text-white hover:bg-indigo-700 transition"
               >
                 <RotateCcw className="h-4 w-4" />
-                {isId ? "Coba Bayar Lagi" : "Retry Payment"}
+                {tOrder("retryPayment")}
               </Link>
             )}
 
@@ -66,7 +62,7 @@ export default async function CheckoutFailedPage({ params, searchParams }: Props
               className="w-full inline-flex items-center justify-center gap-1.5 rounded-xl border border-zinc-200 bg-white py-3 px-4 text-xs font-semibold text-zinc-700 hover:bg-zinc-50 transition"
             >
               <ArrowLeft className="h-4 w-4" />
-              {isId ? "Kembali ke Keranjang" : "Back to Cart"}
+              {tCheckout("backToCart")}
             </Link>
           </div>
         </div>

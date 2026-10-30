@@ -10,22 +10,29 @@ import {
   Section,
   Text,
 } from "@react-email/components";
+import { getEmailTranslations } from "../messages";
 
 interface OrderConfirmationEmailProps {
   orderNumber: string;
   totalAmountFormatted: string;
   orderUrl?: string;
+  locale?: string;
 }
 
 export function OrderConfirmationEmail({
   orderNumber,
   totalAmountFormatted,
   orderUrl,
+  locale = "id",
 }: OrderConfirmationEmailProps) {
+  const t = getEmailTranslations(locale);
+  const preview = t.orderConfirmation.preview.replace("{orderNumber}", orderNumber);
+  const desc = t.orderConfirmation.description.replace("{orderNumber}", `#${orderNumber}`);
+
   return (
     <Html>
       <Head />
-      <Preview>Order #{orderNumber} Confirmation - Mercato</Preview>
+      <Preview>{preview}</Preview>
       <Body style={{ backgroundColor: "#f9fafb", fontFamily: "sans-serif", padding: "20px 0" }}>
         <Container
           style={{
@@ -38,15 +45,14 @@ export function OrderConfirmationEmail({
           <Heading
             style={{ fontSize: "22px", fontWeight: "bold", color: "#18181b", marginBottom: "8px" }}
           >
-            Order Confirmation
+            {t.orderConfirmation.heading}
           </Heading>
-          <Text style={{ fontSize: "14px", color: "#52525b", lineHeight: "22px" }}>
-            Thank you for your order! We have received your order <strong>#{orderNumber}</strong>.
-          </Text>
+          <Text style={{ fontSize: "14px", color: "#52525b", lineHeight: "22px" }}>{desc}</Text>
           <Hr style={{ borderColor: "#e4e4e7", margin: "20px 0" }} />
           <Section>
             <Text style={{ fontSize: "14px", color: "#71717a", margin: "4px 0" }}>
-              Total Amount: <strong style={{ color: "#18181b" }}>{totalAmountFormatted}</strong>
+              {t.orderConfirmation.totalAmount}{" "}
+              <strong style={{ color: "#18181b" }}>{totalAmountFormatted}</strong>
             </Text>
           </Section>
           {orderUrl && (
@@ -63,12 +69,12 @@ export function OrderConfirmationEmail({
                   textDecoration: "none",
                 }}
               >
-                View Order Details
+                {t.orderConfirmation.viewOrder}
               </Button>
             </Section>
           )}
           <Text style={{ fontSize: "12px", color: "#a1a1aa", marginTop: "24px" }}>
-            Mercato E-Commerce Platform. All rights reserved.
+            {t.common.rights}
           </Text>
         </Container>
       </Body>

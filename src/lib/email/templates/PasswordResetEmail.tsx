@@ -9,17 +9,25 @@ import {
   Section,
   Text,
 } from "@react-email/components";
+import { getEmailTranslations } from "../messages";
 
 interface PasswordResetEmailProps {
   userName?: string;
   resetUrl: string;
+  locale?: string;
 }
 
-export function PasswordResetEmail({ userName, resetUrl }: PasswordResetEmailProps) {
+export function PasswordResetEmail({ userName, resetUrl, locale = "id" }: PasswordResetEmailProps) {
+  const t = getEmailTranslations(locale);
+  const greeting = t.passwordReset.greeting.replace(
+    "{name}",
+    userName ?? t.common.customerFallback,
+  );
+
   return (
     <Html>
       <Head />
-      <Preview>Reset your Mercato account password</Preview>
+      <Preview>{t.passwordReset.preview}</Preview>
       <Body style={{ backgroundColor: "#f9fafb", fontFamily: "sans-serif", padding: "20px 0" }}>
         <Container
           style={{
@@ -32,14 +40,11 @@ export function PasswordResetEmail({ userName, resetUrl }: PasswordResetEmailPro
           <Heading
             style={{ fontSize: "20px", fontWeight: "bold", color: "#18181b", marginBottom: "16px" }}
           >
-            Password Reset Request
+            {t.passwordReset.heading}
           </Heading>
+          <Text style={{ fontSize: "14px", color: "#52525b", lineHeight: "22px" }}>{greeting}</Text>
           <Text style={{ fontSize: "14px", color: "#52525b", lineHeight: "22px" }}>
-            Hello {userName ?? "Customer"},
-          </Text>
-          <Text style={{ fontSize: "14px", color: "#52525b", lineHeight: "22px" }}>
-            We received a request to reset your Mercato account password. Click the button below to
-            choose a new password:
+            {t.passwordReset.description}
           </Text>
           <Section style={{ textAlign: "center", margin: "24px 0" }}>
             <Button
@@ -54,12 +59,14 @@ export function PasswordResetEmail({ userName, resetUrl }: PasswordResetEmailPro
                 textDecoration: "none",
               }}
             >
-              Reset Password
+              {t.passwordReset.button}
             </Button>
           </Section>
           <Text style={{ fontSize: "12px", color: "#a1a1aa", marginTop: "24px" }}>
-            If you did not request this password reset, please ignore this email or contact support
-            if you have concerns.
+            {t.passwordReset.expiryNotice}
+          </Text>
+          <Text style={{ fontSize: "12px", color: "#a1a1aa", marginTop: "16px" }}>
+            {t.common.rights}
           </Text>
         </Container>
       </Body>

@@ -28,7 +28,7 @@ describe("Item 11 Unit: Script Safety & Database Target Confirmation Guard", () 
   describe("assertSafeTarget Guard Enforcement", () => {
     it("refuses execution when NODE_ENV is production", () => {
       const origEnv = process.env.NODE_ENV;
-      process.env.NODE_ENV = "production";
+      (process.env as Record<string, string | undefined>).NODE_ENV = "production";
 
       try {
         expect(() =>
@@ -39,7 +39,7 @@ describe("Item 11 Unit: Script Safety & Database Target Confirmation Guard", () 
           }),
         ).toThrow(/prohibited when NODE_ENV is 'production'/);
       } finally {
-        process.env.NODE_ENV = origEnv;
+        (process.env as Record<string, string | undefined>).NODE_ENV = origEnv;
       }
     });
 

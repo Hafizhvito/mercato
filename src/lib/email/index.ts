@@ -1,6 +1,7 @@
 import * as React from "react";
 import { Resend } from "resend";
 import { logger } from "@/lib/logger";
+import { getEmailTranslations } from "./messages";
 import { LatePaymentReviewEmail } from "./templates/LatePaymentReviewEmail";
 import { OrderConfirmationEmail } from "./templates/OrderConfirmationEmail";
 import { OrderShippedEmail } from "./templates/OrderShippedEmail";
@@ -22,18 +23,21 @@ export interface EmailService {
     url: string;
     token: string;
     userName?: string;
+    locale?: string;
   }): Promise<void>;
   sendPasswordResetEmail(options: {
     to: string;
     url: string;
     token: string;
     userName?: string;
+    locale?: string;
   }): Promise<void>;
   sendOrderConfirmationEmail(options: {
     to: string;
     orderNumber: string;
     totalAmountFormatted: string;
     orderUrl?: string;
+    locale?: string;
   }): Promise<void>;
   sendPaymentReceivedEmail(options: {
     to: string;
@@ -41,6 +45,7 @@ export interface EmailService {
     totalAmountFormatted: string;
     paymentMethod: string;
     orderUrl?: string;
+    locale?: string;
   }): Promise<void>;
   sendLatePaymentReviewEmail(options: {
     to: string;
@@ -55,6 +60,7 @@ export interface EmailService {
     trackingNumber: string;
     carrier: string;
     trackingUrl?: string;
+    locale?: string;
   }): Promise<void>;
   sendEmail(options: SendEmailOptions): Promise<void>;
 }
@@ -65,6 +71,7 @@ export class ConsoleEmailService implements EmailService {
     url: string;
     token: string;
     userName?: string;
+    locale?: string;
   }): Promise<void> {
     logger.info(
       { to: options.to, url: options.url },
@@ -75,6 +82,7 @@ export class ConsoleEmailService implements EmailService {
         "[MERCATO DEV EMAIL SERVICE - EMAIL VERIFICATION]\n" +
         `To: ${options.to}\n` +
         `Name: ${options.userName ?? "Valued Customer"}\n` +
+        `Locale: ${options.locale ?? "id"}\n` +
         `Verification URL: ${options.url}\n` +
         `Verification Token: ${options.token}\n` +
         "=======================================================\n",
@@ -86,6 +94,7 @@ export class ConsoleEmailService implements EmailService {
     url: string;
     token: string;
     userName?: string;
+    locale?: string;
   }): Promise<void> {
     logger.info(
       { to: options.to, url: options.url },
@@ -96,6 +105,7 @@ export class ConsoleEmailService implements EmailService {
         "[MERCATO DEV EMAIL SERVICE - PASSWORD RESET]\n" +
         `To: ${options.to}\n` +
         `Name: ${options.userName ?? "User"}\n` +
+        `Locale: ${options.locale ?? "id"}\n` +
         `Reset URL: ${options.url}\n` +
         `Reset Token: ${options.token}\n` +
         "=======================================================\n",
@@ -107,6 +117,7 @@ export class ConsoleEmailService implements EmailService {
     orderNumber: string;
     totalAmountFormatted: string;
     orderUrl?: string;
+    locale?: string;
   }): Promise<void> {
     logger.info(
       { to: options.to, orderNumber: options.orderNumber },
@@ -117,6 +128,7 @@ export class ConsoleEmailService implements EmailService {
         "[MERCATO DEV EMAIL SERVICE - ORDER CONFIRMATION]\n" +
         `To: ${options.to}\n` +
         `Order Number: ${options.orderNumber}\n` +
+        `Locale: ${options.locale ?? "id"}\n` +
         `Total: ${options.totalAmountFormatted}\n` +
         `Order URL: ${options.orderUrl ?? "N/A"}\n` +
         "=======================================================\n",
@@ -129,6 +141,7 @@ export class ConsoleEmailService implements EmailService {
     totalAmountFormatted: string;
     paymentMethod: string;
     orderUrl?: string;
+    locale?: string;
   }): Promise<void> {
     logger.info(
       { to: options.to, orderNumber: options.orderNumber },
@@ -139,6 +152,7 @@ export class ConsoleEmailService implements EmailService {
         "[MERCATO DEV EMAIL SERVICE - PAYMENT RECEIVED]\n" +
         `To: ${options.to}\n` +
         `Order Number: ${options.orderNumber}\n` +
+        `Locale: ${options.locale ?? "id"}\n` +
         `Amount: ${options.totalAmountFormatted}\n` +
         `Method: ${options.paymentMethod}\n` +
         `Order URL: ${options.orderUrl ?? "N/A"}\n` +
@@ -162,6 +176,7 @@ export class ConsoleEmailService implements EmailService {
         "[MERCATO DEV EMAIL SERVICE - LATE PAYMENT MANUAL REVIEW]\n" +
         `To: ${options.to}\n` +
         `Order Number: ${options.orderNumber}\n` +
+        `Locale: ${options.locale ?? "id"}\n` +
         `Amount: ${options.totalAmountFormatted}\n` +
         "Status: On hold for manual merchant review\n" +
         `Order URL: ${options.orderUrl ?? "N/A"}\n` +
@@ -175,6 +190,7 @@ export class ConsoleEmailService implements EmailService {
     trackingNumber: string;
     carrier: string;
     trackingUrl?: string;
+    locale?: string;
   }): Promise<void> {
     logger.info(
       { to: options.to, orderNumber: options.orderNumber },
@@ -222,15 +238,18 @@ export class ResendEmailService implements EmailService {
     url: string;
     token: string;
     userName?: string;
+    locale?: string;
   }): Promise<void> {
     try {
+      const t = getEmailTranslations(options.locale ?? "id");
       await this.resend.emails.send({
         from: this.from,
         to: options.to,
-        subject: "Verify your email address - Mercato",
+        subject: t.verification.preview,
         react: React.createElement(VerificationEmail, {
           userName: options.userName,
           verificationUrl: options.url,
+          locale: options.locale ?? "id",
         }),
       });
       logger.info({ to: options.to }, "Resend: Verification email dispatched successfully");
@@ -245,15 +264,18 @@ export class ResendEmailService implements EmailService {
     url: string;
     token: string;
     userName?: string;
+    locale?: string;
   }): Promise<void> {
     try {
+      const t = getEmailTranslations(options.locale ?? "id");
       await this.resend.emails.send({
         from: this.from,
         to: options.to,
-        subject: "Reset your password - Mercato",
+        subject: t.passwordReset.preview,
         react: React.createElement(PasswordResetEmail, {
           userName: options.userName,
           resetUrl: options.url,
+          locale: options.locale ?? "id",
         }),
       });
       logger.info({ to: options.to }, "Resend: Password reset email dispatched successfully");
@@ -268,16 +290,19 @@ export class ResendEmailService implements EmailService {
     orderNumber: string;
     totalAmountFormatted: string;
     orderUrl?: string;
+    locale?: string;
   }): Promise<void> {
     try {
+      const t = getEmailTranslations(options.locale ?? "id");
       await this.resend.emails.send({
         from: this.from,
         to: options.to,
-        subject: `Order #${options.orderNumber} Confirmation - Mercato`,
+        subject: t.orderConfirmation.preview.replace("{orderNumber}", options.orderNumber),
         react: React.createElement(OrderConfirmationEmail, {
           orderNumber: options.orderNumber,
           totalAmountFormatted: options.totalAmountFormatted,
           orderUrl: options.orderUrl,
+          locale: options.locale ?? "id",
         }),
       });
       logger.info(
@@ -299,17 +324,20 @@ export class ResendEmailService implements EmailService {
     totalAmountFormatted: string;
     paymentMethod: string;
     orderUrl?: string;
+    locale?: string;
   }): Promise<void> {
     try {
+      const t = getEmailTranslations(options.locale ?? "id");
       await this.resend.emails.send({
         from: this.from,
         to: options.to,
-        subject: `Payment Confirmed for Order #${options.orderNumber} - Mercato`,
+        subject: t.paymentReceived.preview.replace("{orderNumber}", options.orderNumber),
         react: React.createElement(PaymentReceivedEmail, {
           orderNumber: options.orderNumber,
           totalAmountFormatted: options.totalAmountFormatted,
           paymentMethod: options.paymentMethod,
           orderUrl: options.orderUrl,
+          locale: options.locale ?? "id",
         }),
       });
       logger.info(
@@ -333,10 +361,11 @@ export class ResendEmailService implements EmailService {
     locale?: string;
   }): Promise<void> {
     try {
+      const t = getEmailTranslations(options.locale ?? "id");
       await this.resend.emails.send({
         from: this.from,
         to: options.to,
-        subject: `Payment Status Notice for Order #${options.orderNumber} - Mercato`,
+        subject: t.latePaymentReview.preview.replace("{orderNumber}", options.orderNumber),
         react: React.createElement(LatePaymentReviewEmail, {
           orderNumber: options.orderNumber,
           totalAmountFormatted: options.totalAmountFormatted,
@@ -363,17 +392,20 @@ export class ResendEmailService implements EmailService {
     trackingNumber: string;
     carrier: string;
     trackingUrl?: string;
+    locale?: string;
   }): Promise<void> {
     try {
+      const t = getEmailTranslations(options.locale ?? "id");
       await this.resend.emails.send({
         from: this.from,
         to: options.to,
-        subject: `Your Mercato Order #${options.orderNumber} Has Shipped!`,
+        subject: t.orderShipped.preview.replace("{orderNumber}", options.orderNumber),
         react: React.createElement(OrderShippedEmail, {
           orderNumber: options.orderNumber,
           trackingNumber: options.trackingNumber,
           carrier: options.carrier,
           trackingUrl: options.trackingUrl,
+          locale: options.locale ?? "id",
         }),
       });
       logger.info(

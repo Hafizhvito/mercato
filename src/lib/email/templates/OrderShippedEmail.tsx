@@ -10,12 +10,14 @@ import {
   Section,
   Text,
 } from "@react-email/components";
+import { getEmailTranslations } from "../messages";
 
 interface OrderShippedEmailProps {
   orderNumber: string;
   trackingNumber: string;
   carrier: string;
   trackingUrl?: string;
+  locale?: string;
 }
 
 export function OrderShippedEmail({
@@ -23,11 +25,16 @@ export function OrderShippedEmail({
   trackingNumber,
   carrier,
   trackingUrl,
+  locale = "id",
 }: OrderShippedEmailProps) {
+  const t = getEmailTranslations(locale);
+  const preview = t.orderShipped.preview.replace("{orderNumber}", orderNumber);
+  const desc = t.orderShipped.description.replace("{orderNumber}", `#${orderNumber}`);
+
   return (
     <Html>
       <Head />
-      <Preview>Your Mercato Order #{orderNumber} has shipped!</Preview>
+      <Preview>{preview}</Preview>
       <Body style={{ backgroundColor: "#f9fafb", fontFamily: "sans-serif", padding: "20px 0" }}>
         <Container
           style={{
@@ -40,19 +47,17 @@ export function OrderShippedEmail({
           <Heading
             style={{ fontSize: "22px", fontWeight: "bold", color: "#18181b", marginBottom: "8px" }}
           >
-            Your Order is On Its Way!
+            {t.orderShipped.heading}
           </Heading>
-          <Text style={{ fontSize: "14px", color: "#52525b", lineHeight: "22px" }}>
-            Great news! Your order <strong>#{orderNumber}</strong> has been shipped and is on its
-            way to your delivery address.
-          </Text>
+          <Text style={{ fontSize: "14px", color: "#52525b", lineHeight: "22px" }}>{desc}</Text>
           <Hr style={{ borderColor: "#e4e4e7", margin: "20px 0" }} />
           <Section>
             <Text style={{ fontSize: "14px", color: "#71717a", margin: "4px 0" }}>
-              Carrier: <strong style={{ color: "#18181b" }}>{carrier}</strong>
+              {t.orderShipped.carrier} <strong style={{ color: "#18181b" }}>{carrier}</strong>
             </Text>
             <Text style={{ fontSize: "14px", color: "#71717a", margin: "4px 0" }}>
-              Tracking Number: <strong style={{ color: "#18181b" }}>{trackingNumber}</strong>
+              {t.orderShipped.trackingNumber}{" "}
+              <strong style={{ color: "#18181b" }}>{trackingNumber}</strong>
             </Text>
           </Section>
           {trackingUrl && (
@@ -69,12 +74,12 @@ export function OrderShippedEmail({
                   textDecoration: "none",
                 }}
               >
-                Track Shipment
+                {t.orderShipped.trackPackage}
               </Button>
             </Section>
           )}
           <Text style={{ fontSize: "12px", color: "#a1a1aa", marginTop: "24px" }}>
-            Mercato E-Commerce Platform. Need assistance? Reply directly to this email.
+            {t.common.rights}
           </Text>
         </Container>
       </Body>

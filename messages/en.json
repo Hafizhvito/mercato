@@ -2,6 +2,10 @@
   "common": {
     "brand": "Mercato",
     "search": "Search products...",
+    "searchPlaceholder": "Search products, categories, collections...",
+    "viewAllResults": "View all results for \"{query}\"",
+    "merchantAdmin": "Merchant Admin",
+    "languageSwitch": "English",
     "cart": "Cart",
     "account": "Account",
     "signIn": "Sign In",
@@ -12,7 +16,19 @@
     "home": "Home",
     "catalog": "Catalog",
     "collections": "Collections",
+    "featured": "Featured",
     "about": "About"
+  },
+  "product": {
+    "outOfStock": "Out of Stock",
+    "inStock": "In Stock",
+    "lowStock": "Only {stock} items left in stock!",
+    "selectVariant": "Select Variant:",
+    "addToCart": "Add to Cart",
+    "adding": "Adding...",
+    "addedSuccess": "Added {quantity} item(s) to shopping cart!",
+    "viewCart": "View Cart →",
+    "category": "Category:"
   },
   "cart": {
     "title": "Your Shopping Cart",
@@ -77,12 +93,107 @@
     "statusDelivered": "Delivered",
     "statusCancelled": "Cancelled",
     "statusRefunded": "Refunded",
+    "statusNeedsReview": "Under Review",
     "purchasedItems": "Purchased Items",
     "shippingDestination": "Shipping Destination",
     "paymentSummary": "Payment Summary",
     "timeline": "Order Timeline",
     "timelineInitial": "Order placed at checkout",
     "payNow": "Pay Now",
-    "continueShopping": "Continue Shopping"
+    "continueShopping": "Continue Shopping",
+    "subtotal": "Subtotal",
+    "shipping": "Shipping",
+    "discount": "Discount",
+    "total": "Total",
+    "viewOrder": "View Order Details",
+    "retryPayment": "Retry Payment",
+    "checkStatus": "Check Order Status",
+    "backToCatalog": "Back to Catalog",
+    "paymentSuccessTitle": "Payment Successful!",
+    "paymentSuccessDesc": "Thank you! Your payment has been received and your order is now being processed by our warehouse.",
+    "paymentFailedTitle": "Payment Incomplete",
+    "paymentFailedDesc": "Your payment was cancelled or could not be completed. Don't worry, your order reservation is still saved.",
+    "paymentPendingTitle": "Awaiting Payment",
+    "paymentPendingDesc": "Your payment is pending or awaiting bank transfer. Please follow the instructions provided by your payment method to complete the transaction."
+  },
+  "payment": {
+    "title": "Complete Payment",
+    "description": "Your order is reserved. Select a secure payment provider below to proceed with your transaction.",
+    "orderUnderReview": "Order Under Review",
+    "orderUnderReviewDesc": "Your payment has been received, but this order requires stock verification by our merchant team. We will contact you shortly.",
+    "noProvidersTitle": "No Payment Methods Configured",
+    "noProvidersDesc": "No automated payment gateway is currently enabled. Please contact store administration for assistance with your order.",
+    "checkStatus": "Check Payment Status",
+    "checkingStatus": "Checking Status...",
+    "checkUpdates": "Check for Status Updates",
+    "payNow": "Pay Now ({amount})",
+    "connecting": "Connecting to Gateway...",
+    "securityNotice": "Transactions are secured with 256-bit PCI-DSS compliant encryption.",
+    "redirectError": "Unable to redirect to payment gateway. Please try again.",
+    "statusCheckSuccess": "Current status: {status} (Payment: {paymentStatus})",
+    "statusCheckFailed": "Status check failed",
+    "sessionFailed": "Payment session creation failed",
+    "midtrans": {
+      "name": "Midtrans Snap",
+      "badge": "Popular in Indonesia",
+      "desc": "QRIS, GoPay, ShopeePay, Virtual Account BCA/Mandiri/BNI/BRI"
+    },
+    "stripe": {
+      "name": "Stripe Checkout",
+      "badge": "Global",
+      "desc": "Visa, Mastercard, American Express, JCB (Hosted 3DS2)"
+    }
+  },
+  "emails": {
+    "common": {
+      "rights": "Mercato E-Commerce Platform. All rights reserved.",
+      "customerFallback": "Valued Customer"
+    },
+    "verification": {
+      "preview": "Verify your Mercato account email address",
+      "heading": "Welcome to Mercato",
+      "greeting": "Hello {name},",
+      "description": "Please click the button below to verify your email address and activate your Mercato account.",
+      "button": "Verify My Email",
+      "expiryNotice": "This link will expire in 24 hours. If you did not create an account, you can safely ignore this email."
+    },
+    "passwordReset": {
+      "preview": "Reset your Mercato account password",
+      "heading": "Reset Your Password",
+      "greeting": "Hello {name},",
+      "description": "We received a request to reset the password for your Mercato account. Click the button below to set a new password.",
+      "button": "Reset Password",
+      "expiryNotice": "This link will expire in 1 hour. If you did not request a password reset, please ignore this email or contact support."
+    },
+    "orderConfirmation": {
+      "preview": "Order #{orderNumber} Confirmation - Mercato",
+      "heading": "Order Confirmation",
+      "description": "Thank you for your order! We have received your order #{orderNumber}.",
+      "totalAmount": "Total Amount:",
+      "viewOrder": "View Order Details"
+    },
+    "paymentReceived": {
+      "preview": "Payment Received for Order #{orderNumber} - Mercato",
+      "heading": "Payment Confirmed",
+      "description": "We have successfully received your payment for order #{orderNumber}. Your order is now being processed by our warehouse team.",
+      "amountPaid": "Amount Paid:",
+      "paymentMethod": "Payment Method:",
+      "viewOrder": "View Order Status"
+    },
+    "orderShipped": {
+      "preview": "Your Mercato Order #{orderNumber} has shipped!",
+      "heading": "Your Order is On Its Way!",
+      "description": "Great news! Your order #{orderNumber} has been shipped and is on its way to your delivery address.",
+      "carrier": "Carrier:",
+      "trackingNumber": "Tracking Number:",
+      "trackPackage": "Track Package"
+    },
+    "latePaymentReview": {
+      "preview": "Order Notice #{orderNumber} - Mercato",
+      "heading": "Payment Status Notice",
+      "description": "We have received your payment of {amount} for order #{orderNumber}. However, because payment was completed after the reservation window expired, your order has been placed on hold for manual review.",
+      "resolution": "Our customer service team is verifying our inventory. If stock is available, your order will be fulfilled promptly. If stock is no longer available, we will assist you with an exchange or prompt refund.",
+      "viewOrder": "View Order Status"
+    }
   }
 }

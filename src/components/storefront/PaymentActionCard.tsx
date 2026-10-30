@@ -10,6 +10,7 @@ import {
   RefreshCw,
   ShieldCheck,
 } from "lucide-react";
+import { useTranslations } from "next-intl";
 import { useState, useTransition } from "react";
 import { checkPaymentStatusAction, createPaymentSessionAction } from "@/modules/payments/actions";
 
@@ -34,6 +35,8 @@ export function PaymentActionCard({
   availableProviders = ["midtrans", "stripe"],
   paymentStatus,
 }: PaymentActionCardProps) {
+  const t = useTranslations("payment");
+
   const defaultProvider = availableProviders.includes(initialProvider as "midtrans" | "stripe")
     ? (initialProvider as "midtrans" | "stripe")
     : (availableProviders[0] ?? "midtrans");
@@ -44,8 +47,6 @@ export function PaymentActionCard({
   const [error, setError] = useState<string | null>(null);
   const [statusMessage, setStatusMessage] = useState<string | null>(null);
 
-  const isId = locale === "id";
-
   const handlePay = () => {
     setError(null);
     setStatusMessage(null);
@@ -55,14 +56,10 @@ export function PaymentActionCard({
         if (session.redirectUrl) {
           window.location.href = session.redirectUrl;
         } else {
-          setError(
-            isId
-              ? "Tidak dapat mengarahkan ke halaman pembayaran. Silakan coba lagi."
-              : "Unable to redirect to payment gateway. Please try again.",
-          );
+          setError(t("redirectError"));
         }
       } catch (err) {
-        setError(err instanceof Error ? err.message : "Payment session creation failed");
+        setError(err instanceof Error ? err.message : t("sessionFailed"));
       }
     });
   };
@@ -75,13 +72,14 @@ export function PaymentActionCard({
         const result = await checkPaymentStatusAction({ orderNumber, token, locale });
         if (result.success) {
           setStatusMessage(
-            isId
-              ? `Status terkini: ${result.status} (Pembayaran: ${result.paymentStatus})`
-              : `Current status: ${result.status} (Payment: ${result.paymentStatus})`,
+            t("statusCheckSuccess", {
+              status: result.status,
+              paymentStatus: result.paymentStatus,
+            }),
           );
         }
       } catch (err) {
-        setError(err instanceof Error ? err.message : "Status check failed");
+        setError(err instanceof Error ? err.message : t("statusCheckFailed"));
       }
     });
   };
@@ -91,15 +89,9 @@ export function PaymentActionCard({
       <div className="rounded-2xl border-2 border-amber-300 bg-amber-50/70 p-6 shadow-sm space-y-3">
         <div className="flex items-center gap-2">
           <AlertCircle className="h-5 w-5 text-amber-600" />
-          <h3 className="font-bold text-zinc-950 text-base">
-            {isId ? "Pesanan Dalam Peninjauan" : "Order Under Review"}
-          </h3>
+          <h3 className="font-bold text-zinc-950 text-base">{t("orderUnderReview")}</h3>
         </div>
-        <p className="text-xs text-zinc-700 leading-relaxed">
-          {isId
-            ? "Pembayaran Anda telah diterima, namun pesanan ini membutuhkan verifikasi ketersediaan stok oleh admin kami. Tim kami akan segera menghubungi Anda."
-            : "Your payment has been received, but this order requires stock verification by our merchant team. We will contact you shortly."}
-        </p>
+        <p className="text-xs text-zinc-700 leading-relaxed">{t("orderUnderReviewDesc")}</p>
         <button
           type="button"
           onClick={handleCheckStatus}
@@ -111,7 +103,7 @@ export function PaymentActionCard({
           ) : (
             <RefreshCw className="h-3.5 w-3.5" />
           )}
-          {isId ? "Periksa Pembaruan Status" : "Check for Status Updates"}
+          {t("checkUpdates")}
         </button>
       </div>
     );
@@ -123,14 +115,8 @@ export function PaymentActionCard({
         <div className="mx-auto flex h-10 w-10 items-center justify-center rounded-full bg-amber-100 text-amber-600">
           <AlertCircle className="h-5 w-5" />
         </div>
-        <h4 className="font-bold text-zinc-950 text-sm">
-          {isId ? "Kanal Pembayaran Belum Tersedia" : "No Payment Methods Configured"}
-        </h4>
-        <p className="text-xs text-zinc-600 leading-relaxed">
-          {isId
-            ? "Saat ini belum ada gateway pembayaran yang aktif. Silakan hubungi admin toko untuk bantuan pembayaran pesanan Anda."
-            : "No automated payment gateway is currently enabled. Please contact store administration for assistance with your order."}
-        </p>
+        <h4 className="font-bold text-zinc-950 text-sm">{t("noProvidersTitle")}</h4>
+        <p className="text-xs text-zinc-600 leading-relaxed">{t("noProvidersDesc")}</p>
       </div>
     );
   }
@@ -139,16 +125,10 @@ export function PaymentActionCard({
     <div className="rounded-2xl border-2 border-indigo-200 bg-linear-to-b from-indigo-50/50 to-white p-6 shadow-sm">
       <div className="flex items-center gap-2 mb-4">
         <ShieldCheck className="h-5 w-5 text-indigo-600" />
-        <h3 className="font-bold text-zinc-950 text-base">
-          {isId ? "Selesaikan Pembayaran" : "Complete Payment"}
-        </h3>
+        <h3 className="font-bold text-zinc-950 text-base">{t("title")}</h3>
       </div>
 
-      <p className="text-xs text-zinc-600 mb-5 leading-relaxed">
-        {isId
-          ? "Pesanan Anda telah dicatat. Silakan pilih metode pembayaran yang aman di bawah ini untuk menyelesaikan transaksi."
-          : "Your order is reserved. Select a secure payment provider below to proceed with your transaction."}
-      </p>
+      <p className="text-xs text-zinc-600 mb-5 leading-relaxed">{t("description")}</p>
 
       {error && (
         <div className="mb-4 rounded-xl bg-red-50 p-3 text-xs text-red-700 border border-red-200 flex items-center gap-2">
@@ -186,15 +166,13 @@ export function PaymentActionCard({
               <div className="flex items-center justify-between">
                 <span className="text-xs font-bold text-zinc-900 flex items-center gap-1.5">
                   <QrCode className="h-4 w-4 text-zinc-700" />
-                  Midtrans Snap
+                  {t("midtrans.name")}
                 </span>
                 <span className="text-[10px] font-semibold uppercase tracking-wider text-emerald-700 bg-emerald-50 px-2 py-0.5 rounded-full border border-emerald-200">
-                  {isId ? "Populer di Indonesia" : "Popular in Indonesia"}
+                  {t("midtrans.badge")}
                 </span>
               </div>
-              <p className="text-[11px] text-zinc-500 mt-1">
-                QRIS, GoPay, ShopeePay, Virtual Account BCA/Mandiri/BNI/BRI
-              </p>
+              <p className="text-[11px] text-zinc-500 mt-1">{t("midtrans.desc")}</p>
             </div>
           </label>
         )}
@@ -219,15 +197,13 @@ export function PaymentActionCard({
               <div className="flex items-center justify-between">
                 <span className="text-xs font-bold text-zinc-900 flex items-center gap-1.5">
                   <CreditCard className="h-4 w-4 text-zinc-700" />
-                  Stripe Checkout
+                  {t("stripe.name")}
                 </span>
                 <span className="text-[10px] font-semibold uppercase tracking-wider text-zinc-600 bg-zinc-100 px-2 py-0.5 rounded-full">
-                  Global
+                  {t("stripe.badge")}
                 </span>
               </div>
-              <p className="text-[11px] text-zinc-500 mt-1">
-                Visa, Mastercard, American Express, JCB (Hosted 3DS2)
-              </p>
+              <p className="text-[11px] text-zinc-500 mt-1">{t("stripe.desc")}</p>
             </div>
           </label>
         )}
@@ -243,12 +219,12 @@ export function PaymentActionCard({
         {isPending ? (
           <>
             <Loader2 className="h-4 w-4 animate-spin" />
-            {isId ? "Menghubungkan ke Pembayaran..." : "Connecting to Gateway..."}
+            {t("connecting")}
           </>
         ) : (
           <>
             <ExternalLink className="h-4 w-4" />
-            {isId ? `Bayar Sekarang (${amountFormatted})` : `Pay Now (${amountFormatted})`}
+            {t("payNow", { amount: amountFormatted })}
           </>
         )}
       </button>
@@ -263,21 +239,17 @@ export function PaymentActionCard({
         {isCheckingStatus ? (
           <>
             <Loader2 className="h-3.5 w-3.5 animate-spin text-zinc-500" />
-            {isId ? "Memeriksa Status..." : "Checking Status..."}
+            {t("checkingStatus")}
           </>
         ) : (
           <>
             <RefreshCw className="h-3.5 w-3.5 text-zinc-500" />
-            {isId ? "Periksa Status Pembayaran" : "Check Payment Status"}
+            {t("checkStatus")}
           </>
         )}
       </button>
 
-      <p className="text-[11px] text-zinc-400 text-center mt-3">
-        {isId
-          ? "Transaksi diamankan dengan enkripsi 256-bit standar PCI-DSS."
-          : "Transactions are secured with 256-bit PCI-DSS compliant encryption."}
-      </p>
+      <p className="text-[11px] text-zinc-400 text-center mt-3">{t("securityNotice")}</p>
     </div>
   );
 }
