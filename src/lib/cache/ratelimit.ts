@@ -86,7 +86,14 @@ export function createLimiter(
   const upstashUrl = config?.upstashUrl ?? env.UPSTASH_REDIS_REST_URL;
   const upstashToken = config?.upstashToken ?? env.UPSTASH_REDIS_REST_TOKEN;
 
-  if (nodeEnv === "production") {
+  // Enforce strict check in production runtime or when explicitly tested via config
+  const isExplicitProduction = config?.nodeEnv === "production";
+  const isProductionRuntime =
+    nodeEnv === "production" &&
+    process.env.SKIP_ENV_VALIDATION !== "true" &&
+    process.env.CI !== "true";
+
+  if (isExplicitProduction || isProductionRuntime) {
     if (isDummyUpstash(upstashUrl) || !upstashToken) {
       throw new Error(
         "Fatal: Production environment requires valid UPSTASH_REDIS_REST_URL and UPSTASH_REDIS_REST_TOKEN. " +
