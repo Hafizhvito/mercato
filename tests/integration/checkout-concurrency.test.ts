@@ -347,4 +347,40 @@ describe("Phase 4 Strengthened Concurrency, Reservations, & Integrity Suite", ()
     expect(orderResult.order.shippingAmount).not.toBe(1);
     expect(orderResult.order.totalAmount).toBe(150_000 + 10_000);
   });
+
+  it("Item 8: creates order with selected non-default shipping method and accurate multi-item weight", async () => {
+    const timestamp = Date.now();
+    const product = await catalogService.createProductWithVariants(storeAId, {
+      name: `Multi-weight Shipping Product ${timestamp}`,
+      status: "published",
+      variants: [
+        {
+          sku: `SKU-SHIP-MULTI-${timestamp}`,
+          title: "Multi Item",
+          price: 100_000,
+          stock: 10,
+        },
+      ],
+    });
+    const variantId = product.variants[0]!.id;
+
+    // Cart with 2 items -> weightGrams = 2 * 500 + 500 = 1500g -> ceil(1500 / 1000) = 2kg
+    // JNE YES baseExpress in Jabodetabek = 20,000 * 2 = 40,000
+    const orderResult = await orderService.createOrder({
+      storeId: storeAId,
+      idempotencyKey: `idem-ship-yes-${timestamp}`,
+      checkoutSessionId: `sess-ship-yes-${timestamp}`,
+      shippingAddress: mockAddress,
+      shippingCarrier: "JNE",
+      shippingService: "YES",
+      shippingAmountMinor: 40_000,
+      items: [{ productId: product.id, variantId, quantity: 2 }],
+    });
+
+    expect(orderResult.order.shippingCarrier).toBe("JNE");
+    expect(orderResult.order.shippingService).toBe("YES");
+    expect(orderResult.order.shippingAmount).toBe(40_000);
+    expect(orderResult.order.subtotal).toBe(200_000);
+    expect(orderResult.order.totalAmount).toBe(240_000);
+  });
 });

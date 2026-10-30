@@ -72,8 +72,11 @@ export function CheckoutView({ cart, provinces, locale }: Props) {
   const [discountError, setDiscountError] = useState<string | null>(null);
 
   // Client Session & Idempotency Key
-  const [idempotencyKey] = useState(() => crypto.randomUUID());
+  const [idempotencyKey, setIdempotencyKey] = useState(() => crypto.randomUUID());
   const [checkoutSessionId] = useState(() => crypto.randomUUID());
+
+  // Recompute cart weight accurately so client and server weight match identically
+  const cartWeightGrams = cart.items.reduce((acc, it) => acc + it.quantity * 500, 500);
 
   async function handleProvinceChange(e: React.ChangeEvent<HTMLSelectElement>) {
     const provCode = e.target.value;
@@ -147,10 +150,20 @@ export function CheckoutView({ cart, provinces, locale }: Props) {
           country: "Indonesia",
         };
 
-        const rates = await calculateShippingRatesAction(destAddress, 1000);
+        const rates = await calculateShippingRatesAction(destAddress, cartWeightGrams);
         setShippingRates(rates);
         if (rates.length > 0) {
-          setSelectedRate(rates[0] ?? null);
+          setSelectedRate((prev) => {
+            if (prev) {
+              const matching = rates.find(
+                (r) =>
+                  r.carrier.toLowerCase() === prev.carrier.toLowerCase() &&
+                  r.service.toLowerCase() === prev.service.toLowerCase(),
+              );
+              if (matching) return matching;
+            }
+            return rates[0] ?? null;
+          });
         }
       } catch (err) {
         setError(err instanceof Error ? err.message : "Failed to load shipping rates");
@@ -483,7 +496,10 @@ export function CheckoutView({ cart, provinces, locale }: Props) {
                           type="radio"
                           name="shippingRate"
                           checked={isSelected}
-                          onChange={() => setSelectedRate(rate)}
+                          onChange={() => {
+                            setSelectedRate(rate);
+                            setIdempotencyKey(crypto.randomUUID());
+                          }}
                           className="text-zinc-900 focus:ring-zinc-900"
                         />
                         <div>
