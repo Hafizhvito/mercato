@@ -112,29 +112,25 @@ async function seedCatalog() {
       name: "Terlaris Minggu Ini",
       slug: "terlaris",
       description: "Produk paling diminati pelanggan dengan rating tertinggi",
-      imageUrl:
-        "https://images.unsplash.com/photo-1441986300917-64674bd600d8?auto=format&fit=crop&w=1200&q=80",
+      imageUrl: "/images/collections/terlaris.svg",
     },
     {
       name: "Koleksi Batik Nusantara",
       slug: "batik-nusantara",
       description: "Sentuhan karya tradisional dengan siluet modern untuk segala suasana",
-      imageUrl:
-        "https://images.unsplash.com/photo-1617627143750-d86bc21e42bb?auto=format&fit=crop&w=1200&q=80",
+      imageUrl: "/images/collections/batik-nusantara.svg",
     },
     {
       name: "Gaya Hidup & Produktivitas",
       slug: "gaya-hidup-modern",
       description: "Peralatan esensial penunjang kenyamanan dan performa kerja",
-      imageUrl:
-        "https://images.unsplash.com/photo-1519389950473-47ba0277781c?auto=format&fit=crop&w=1200&q=80",
+      imageUrl: "/images/collections/gaya-hidup-modern.svg",
     },
     {
       name: "Koleksi Ramadhan & Hari Raya",
       slug: "koleksi-hari-raya",
       description: "Pilihan busana santun dan hampers premium untuk momen istimewa",
-      imageUrl:
-        "https://images.unsplash.com/photo-1542291026-7eec264c27ff?auto=format&fit=crop&w=1200&q=80",
+      imageUrl: "/images/collections/koleksi-hari-raya.svg",
     },
   ];
 
@@ -172,9 +168,7 @@ async function seedCatalog() {
       collectionSlugs: ["batik-nusantara", "terlaris"],
       description:
         "Kemeja batik pria bermotif parang modern yang dibuat dari katun primisima premium dengan lapisan furing lembut. Nyaman dikenakan untuk agenda formal maupun kasual.",
-      images: [
-        "https://images.unsplash.com/photo-1596755094514-f87e34085b2c?auto=format&fit=crop&w=800&q=80",
-      ],
+      images: ["/images/products/kemeja-batik-solo.svg"],
       options: [
         { name: "Ukuran", values: ["M", "L", "XL"] },
         { name: "Warna", values: ["Navy", "Cokelat Klasik"] },
@@ -189,9 +183,7 @@ async function seedCatalog() {
       collectionSlugs: ["terlaris"],
       description:
         "Celana chino panjang pria dengan bahan cotton twill elastis. Desain potongan rapi yang fleksibel dan adem untuk dipakai seharian beraktivitas.",
-      images: [
-        "https://images.unsplash.com/photo-1624378439575-d8705ad7ae80?auto=format&fit=crop&w=800&q=80",
-      ],
+      images: ["/images/products/celana-chino-stretch.svg"],
       options: [
         { name: "Ukuran", values: ["30", "32", "34"] },
         { name: "Warna", values: ["Khaki", "Hitam", "Abu-Abu"] },
@@ -206,9 +198,7 @@ async function seedCatalog() {
       collectionSlugs: [],
       description:
         "T-shirt basic pria menggunakan katun combed 24s berserat tebal dan tidak menerawang. Jahitan rantai standar distro di bagian bahu dan leher.",
-      images: [
-        "https://images.unsplash.com/photo-1521572267360-ee0c2909d518?auto=format&fit=crop&w=800&q=80",
-      ],
+      images: ["/images/products/kaos-polos-cotton.svg"],
       options: [
         { name: "Ukuran", values: ["S", "M", "L", "XL"] },
         { name: "Warna", values: ["Putih", "Hitam", "Hijau Sage"] },
@@ -223,9 +213,7 @@ async function seedCatalog() {
       collectionSlugs: ["terlaris"],
       description:
         "Jaket denim tebal 14oz dengan efek wash retro klasik. Dilengkapi saku fungsional ganda di dada dan saku samping.",
-      images: [
-        "https://images.unsplash.com/photo-1576995853123-5a10305d93c0?auto=format&fit=crop&w=800&q=80",
-      ],
+      images: ["/images/products/jaket-denim-trucker.svg"],
       options: [{ name: "Ukuran", values: ["M", "L", "XL"] }],
       basePrice: 420000,
       stock: 18,
@@ -239,9 +227,7 @@ async function seedCatalog() {
       collectionSlugs: ["batik-nusantara", "koleksi-hari-raya"],
       description:
         "Tunik panjang wanita berbahan sutra rayon jatuh yang dingin dan berkilau mewah. Cocok untuk acara silaturahmi keluarga dan perayaan istimewa.",
-      images: [
-        "https://images.unsplash.com/photo-1583391733956-3750e0ff4e8b?auto=format&fit=crop&w=800&q=80",
-      ],
+      images: ["/images/products/gamis-tunik-silk.svg"],
       options: [
         { name: "Ukuran", values: ["All Size", "Big Size"] },
         { name: "Warna", values: ["Emerald", "Dusty Pink", "Mocca"] },
@@ -256,9 +242,7 @@ async function seedCatalog() {
       collectionSlugs: ["terlaris"],
       description:
         "Blouse lengan panjang wanita dengan kerah shanghai minimalis berbahan 100% linen alami yang berpori dan sejuk.",
-      images: [
-        "https://images.unsplash.com/photo-1551163943-3f6a855d1153?auto=format&fit=crop&w=800&q=80",
-      ],
+      images: ["/images/products/blouse-linen-mandari.svg"],
       options: [
         { name: "Ukuran", values: ["S/M", "L/XL"] },
         { name: "Warna", values: ["Broken White", "Terracotta"] },
@@ -273,9 +257,7 @@ async function seedCatalog() {
       collectionSlugs: ["koleksi-hari-raya"],
       description:
         "Rok lipit plisket rapi yang tidak mudah pudar lipatannya meski sering dicuci. Dilengkapi ban karet pinggang elastis yang nyaman.",
-      images: [
-        "https://images.unsplash.com/photo-1583496661160-fb5886a0aaaa?auto=format&fit=crop&w=800&q=80",
-      ],
+      images: ["/images/products/rok-plisket-silk.svg"],
       options: [{ name: "Warna", values: ["Hitam", "Choco", "Silver Grey"] }],
       basePrice: 145000,
       stock: 50,
@@ -287,9 +269,7 @@ async function seedCatalog() {
       collectionSlugs: ["koleksi-hari-raya"],
       description:
         "Jilbab segi empat berukuran 115x115 cm dengan tepian lasercut rapi. Serat voal premium yang mudah tegak di dahi dan tidak gerah.",
-      images: [
-        "https://images.unsplash.com/photo-1609357605129-26f69add5d6e?auto=format&fit=crop&w=800&q=80",
-      ],
+      images: ["/images/products/hijab-paris-voal.svg"],
       options: [{ name: "Warna", values: ["Oatmilk", "Army", "Soft Lilac", "Denim"] }],
       basePrice: 65000,
       stock: 120,
@@ -303,9 +283,7 @@ async function seedCatalog() {
       collectionSlugs: ["terlaris", "gaya-hidup-modern"],
       description:
         "Biji kopi single origin Arabika dari dataran tinggi Takengon Aceh. Profil rasa seimbang dengan keasaman citrus lembut dan aroma rempah alami manis.",
-      images: [
-        "https://images.unsplash.com/photo-1587734195503-904fca47e0e9?auto=format&fit=crop&w=800&q=80",
-      ],
+      images: ["/images/products/kopi-arabika-gayo.svg"],
       options: [{ name: "Grind Size", values: ["Biji Utuh", "Giling Kasar", "Giling Halus"] }],
       basePrice: 95000,
       stock: 60,
@@ -317,9 +295,7 @@ async function seedCatalog() {
       collectionSlugs: [],
       description:
         "Kopi robusta olahan pascapanen wine fermentation alami dengan body tebal, aroma cokelat pekat, dan aftertaste buah tropis manis.",
-      images: [
-        "https://images.unsplash.com/photo-1514432324607-a09d9b4aefdd?auto=format&fit=crop&w=800&q=80",
-      ],
+      images: ["/images/products/kopi-robusta-lampung.svg"],
       options: [{ name: "Grind Size", values: ["Biji Utuh", "Giling Halus (Espresso)"] }],
       basePrice: 75000,
       stock: 45,
@@ -331,9 +307,7 @@ async function seedCatalog() {
       collectionSlugs: ["gaya-hidup-modern"],
       description:
         "Daun teh hijau pucuk pekoe yang dicampur bunga melati segar dari kebun teh pegunungan Jawa Tengah. Harum semerbak dan menenangkan.",
-      images: [
-        "https://images.unsplash.com/photo-1576092768241-dec231879fc3?auto=format&fit=crop&w=800&q=80",
-      ],
+      images: ["/images/products/teh-melati-pekoe.svg"],
       options: [{ name: "Kemasan", values: ["Canister 100g", "Refill Pouch 200g"] }],
       basePrice: 68000,
       stock: 55,
@@ -345,9 +319,7 @@ async function seedCatalog() {
       collectionSlugs: ["terlaris"],
       description:
         "Sirup pemanis gula aren cair alami tanpa bahan pengawet. Ideal untuk campuran kopi susu kekinian, es cendol, dan sajian kue.",
-      images: [
-        "https://images.unsplash.com/photo-1589301760014-d929f3979dbc?auto=format&fit=crop&w=800&q=80",
-      ],
+      images: ["/images/products/sirup-gula-aren.svg"],
       options: [],
       basePrice: 52000,
       stock: 90,
@@ -361,9 +333,7 @@ async function seedCatalog() {
       collectionSlugs: ["gaya-hidup-modern", "terlaris"],
       description:
         "Earphone nirkabel Bluetooth 5.4 dengan teknologi Active Noise Cancelling hingga 38dB, driver dinamis 12mm, dan baterai tahan hingga 32 jam.",
-      images: [
-        "https://images.unsplash.com/photo-1590658268037-6bf12165a8df?auto=format&fit=crop&w=800&q=80",
-      ],
+      images: ["/images/products/tws-earbuds-anc.svg"],
       options: [{ name: "Warna", values: ["Matte Black", "Glacier White"] }],
       basePrice: 549000,
       stock: 35,
@@ -375,9 +345,7 @@ async function seedCatalog() {
       collectionSlugs: ["gaya-hidup-modern"],
       description:
         "Keyboard mekanik nirkabel dengan layout 75%, gasket mount hening, switch pre-lubed, dan koneksi triple-mode (Bluetooth, 2.4GHz, Type-C).",
-      images: [
-        "https://images.unsplash.com/photo-1587829741301-dc798b83add3?auto=format&fit=crop&w=800&q=80",
-      ],
+      images: ["/images/products/keyboard-mekanikal-75.svg"],
       options: [
         { name: "Switch", values: ["Linear Red", "Tactile Brown"] },
         { name: "Warna", values: ["Retro Grey", "Nordic Blue"] },
@@ -392,9 +360,7 @@ async function seedCatalog() {
       collectionSlugs: ["terlaris"],
       description:
         "Kepala charger berukuran mini berbasis Galium Nitrida (GaN) dengan dua port USB-C Power Delivery dan satu port USB-A. Mampu mengisi daya laptop dan ponsel bersamaan.",
-      images: [
-        "https://images.unsplash.com/photo-1583863788434-e58a36330cf0?auto=format&fit=crop&w=800&q=80",
-      ],
+      images: ["/images/products/charger-gan-65w.svg"],
       options: [{ name: "Warna", values: ["Hitam", "Putih"] }],
       basePrice: 285000,
       stock: 50,
@@ -406,9 +372,7 @@ async function seedCatalog() {
       collectionSlugs: ["gaya-hidup-modern"],
       description:
         "Jam tangan pintar dengan layar sentuh AMOLED jernih, sensor detak jantung SpO2 24 jam, 100+ mode olahraga, dan ketahanan air 5 ATM.",
-      images: [
-        "https://images.unsplash.com/photo-1523275335684-37898b6baf30?auto=format&fit=crop&w=800&q=80",
-      ],
+      images: ["/images/products/smartwatch-amoled-gps.svg"],
       options: [{ name: "Warna Strap", values: ["Obsidian Black", "Midnight Blue"] }],
       basePrice: 1250000,
       stock: 15,
@@ -422,9 +386,7 @@ async function seedCatalog() {
       collectionSlugs: ["terlaris"],
       description:
         "Serum pencerah kulit yang membantu menyamarkan noda hitam, mengontrol produksi minyak berlebih, dan merawat kekuatan skin barrier.",
-      images: [
-        "https://images.unsplash.com/photo-1620916566398-39f1143ab7be?auto=format&fit=crop&w=800&q=80",
-      ],
+      images: ["/images/products/serum-wajah-niacinamide.svg"],
       options: [{ name: "Ukuran", values: ["20ml", "50ml"] }],
       basePrice: 119000,
       stock: 65,
@@ -436,9 +398,7 @@ async function seedCatalog() {
       collectionSlugs: ["terlaris"],
       description:
         "Tabir surya bertekstur gel air seringan embun yang cepat meresap tanpa meninggalkan rasa lengket atau whitecast pada kulit.",
-      images: [
-        "https://images.unsplash.com/photo-1556228720-195a672e8a03?auto=format&fit=crop&w=800&q=80",
-      ],
+      images: ["/images/products/sunscreen-gel-uv-shield.svg"],
       options: [],
       basePrice: 85000,
       stock: 80,
@@ -450,9 +410,7 @@ async function seedCatalog() {
       collectionSlugs: [],
       description:
         "Pembersih wajah dengan pH seimbang 5.5 yang diperkaya Centella Asiatica dan ceramide untuk membersihkan kotoran tanpa membuat kulit kering tertarik.",
-      images: [
-        "https://images.unsplash.com/photo-1556228722-d0b779a544f8?auto=format&fit=crop&w=800&q=80",
-      ],
+      images: ["/images/products/facial-cleanser-low-ph.svg"],
       options: [],
       basePrice: 79000,
       stock: 70,
@@ -464,9 +422,7 @@ async function seedCatalog() {
       collectionSlugs: ["koleksi-hari-raya"],
       description:
         "Pewarna bibir tahan lama dengan formula melembabkan jojoba oil yang memberikan hasil akhir velvet natural lembut.",
-      images: [
-        "https://images.unsplash.com/photo-1586495777744-4413f21062fa?auto=format&fit=crop&w=800&q=80",
-      ],
+      images: ["/images/products/lip-tint-velvet-hydrating.svg"],
       options: [{ name: "Shade", values: ["01 Berry Rose", "02 Sunset Peach", "03 Cherry Plum"] }],
       basePrice: 62000,
       stock: 95,
@@ -480,9 +436,7 @@ async function seedCatalog() {
       collectionSlugs: ["gaya-hidup-modern"],
       description:
         "Lilin wangi alami berbahan 100% soy wax dengan sumbu kayu bersuara gemeretak menenangkan. Aroma lavender vanila dan eucalyptus hutan.",
-      images: [
-        "https://images.unsplash.com/photo-1603006905003-be475563bc59?auto=format&fit=crop&w=800&q=80",
-      ],
+      images: ["/images/products/lilin-aromaterapi-soy.svg"],
       options: [{ name: "Aroma", values: ["Lavender Vanilla", "Morning Eucalyptus"] }],
       basePrice: 125000,
       stock: 40,
@@ -494,9 +448,7 @@ async function seedCatalog() {
       collectionSlugs: ["terlaris", "gaya-hidup-modern"],
       description:
         "Botol minum vakum dinding ganda yang menjaga minuman tetap dingin hingga 24 jam atau panas hingga 12 jam. Bebas BPA dan anti-bocor.",
-      images: [
-        "https://images.unsplash.com/photo-1602143407151-7111542de6e8?auto=format&fit=crop&w=800&q=80",
-      ],
+      images: ["/images/products/tumbler-stainless-steel.svg"],
       options: [{ name: "Warna", values: ["Matte Army", "Stainless Steel", "Sakura Pink"] }],
       basePrice: 179000,
       stock: 55,
@@ -508,9 +460,7 @@ async function seedCatalog() {
       collectionSlugs: ["gaya-hidup-modern"],
       description:
         "Pengharum ruangan ultrasonik berlapis keramik matte dengan lampu LED ambient hangat dan timer otomatis mati saat air habis.",
-      images: [
-        "https://images.unsplash.com/photo-1608571423902-eed4a5ad8108?auto=format&fit=crop&w=800&q=80",
-      ],
+      images: ["/images/products/diffuser-ultrasonic-keramik.svg"],
       options: [{ name: "Warna", values: ["Chalk White", "Slate Grey"] }],
       basePrice: 310000,
       stock: 22,
@@ -522,9 +472,7 @@ async function seedCatalog() {
       collectionSlugs: ["gaya-hidup-modern"],
       description:
         "Set cangkir kopi buatan tangan perajin lokal dengan tekstur glasir kasar natural yang unik pada tiap cangkir. Kapasitas 220ml.",
-      images: [
-        "https://images.unsplash.com/photo-1514432324607-a09d9b4aefdd?auto=format&fit=crop&w=800&q=80",
-      ],
+      images: ["/images/products/cangkir-keramik-handmade.svg"],
       options: [],
       basePrice: 165000,
       stock: 30,

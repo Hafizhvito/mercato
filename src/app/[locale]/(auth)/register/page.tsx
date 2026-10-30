@@ -1,12 +1,16 @@
 "use client";
 
 import Link from "next/link";
-import { useRouter } from "next/navigation";
-import { useState } from "react";
+import { useRouter, useSearchParams } from "next/navigation";
+import { Suspense, useState } from "react";
 import { authClient } from "@/lib/auth/client";
 
-export default function LoginPage() {
+function RegisterForm() {
   const router = useRouter();
+  const searchParams = useSearchParams();
+  const callbackUrl = searchParams.get("callbackUrl") || "/";
+
+  const [name, setName] = useState("");
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [error, setError] = useState<string | null>(null);
@@ -18,21 +22,22 @@ export default function LoginPage() {
     setIsLoading(true);
 
     try {
-      const { error: signInError } = await authClient.signIn.email({
+      const { error: signUpError } = await authClient.signUp.email({
+        name,
         email,
         password,
       });
 
-      if (signInError) {
-        setError(signInError.message || "Email atau password salah.");
+      if (signUpError) {
+        setError(signUpError.message || "Gagal mendaftarkan akun.");
         setIsLoading(false);
         return;
       }
 
-      router.push("/");
+      router.push(callbackUrl);
       router.refresh();
     } catch {
-      setError("Terjadi kesalahan saat masuk. Silakan coba lagi.");
+      setError("Terjadi kesalahan saat mendaftar. Silakan coba lagi.");
       setIsLoading(false);
     }
   };
@@ -45,15 +50,19 @@ export default function LoginPage() {
             Mercato
           </Link>
           <h2 className="mt-4 text-xl font-semibold tracking-tight text-zinc-900">
-            Masuk ke Akun Anda
+            Buat Akun Pelanggan Baru
           </h2>
           <p className="mt-2 text-sm text-zinc-600">
-            Belum punya akun?{" "}
+            Sudah memiliki akun?{" "}
             <Link
-              href="/register"
+              href={
+                callbackUrl !== "/"
+                  ? `/login?callbackUrl=${encodeURIComponent(callbackUrl)}`
+                  : "/login"
+              }
               className="font-medium text-zinc-950 underline hover:text-zinc-800"
             >
-              Daftar sekarang
+              Masuk
             </Link>
           </p>
         </div>
@@ -65,6 +74,21 @@ export default function LoginPage() {
         )}
 
         <form className="mt-8 space-y-5" onSubmit={handleSubmit}>
+          <div>
+            <label htmlFor="name" className="block text-sm font-medium text-zinc-700">
+              Nama Lengkap
+            </label>
+            <input
+              id="name"
+              type="text"
+              required
+              value={name}
+              onChange={(e) => setName(e.target.value)}
+              className="mt-1 block w-full rounded-md border border-zinc-300 px-3 py-2 text-sm placeholder-zinc-400 shadow-sm focus:border-zinc-950 focus:outline-none focus:ring-1 focus:ring-zinc-950"
+              placeholder="Nama Anda"
+            />
+          </div>
+
           <div>
             <label htmlFor="email" className="block text-sm font-medium text-zinc-700">
               Email
@@ -81,36 +105,40 @@ export default function LoginPage() {
           </div>
 
           <div>
-            <div className="flex items-center justify-between">
-              <label htmlFor="password" className="block text-sm font-medium text-zinc-700">
-                Password
-              </label>
-              <Link
-                href="/forgot-password"
-                className="text-xs font-medium text-zinc-600 hover:text-zinc-950"
-              >
-                Lupa password?
-              </Link>
-            </div>
+            <label htmlFor="password" className="block text-sm font-medium text-zinc-700">
+              Password
+            </label>
             <input
               id="password"
               type="password"
               required
+              minLength={8}
               value={password}
               onChange={(e) => setPassword(e.target.value)}
               className="mt-1 block w-full rounded-md border border-zinc-300 px-3 py-2 text-sm placeholder-zinc-400 shadow-sm focus:border-zinc-950 focus:outline-none focus:ring-1 focus:ring-zinc-950"
+              placeholder="Minimal 8 karakter"
             />
           </div>
 
           <button
             type="submit"
             disabled={isLoading}
-            className="w-full rounded-md bg-zinc-950 py-2.5 px-4 text-sm font-medium text-white shadow hover:bg-zinc-800 focus:outline-none focus:ring-2 focus:ring-zinc-950 focus:ring-offset-2 disabled:opacity-50"
+            className="w-full rounded-md bg-zinc-950 py-2.5 px-4 text-sm font-medium text-white shadow hover:bg-zinc-800 focus:outline-none focus:ring-2 focus:ring-zinc-950 focus:ring-offset-2 disabled:bg-zinc-400"
           >
-            {isLoading ? "Memproses..." : "Masuk"}
+            {isLoading ? "Memproses..." : "Daftar"}
           </button>
         </form>
       </div>
     </div>
+  );
+}
+
+export default function RegisterPage() {
+  return (
+    <Suspense
+      fallback={<div className="flex min-h-screen items-center justify-center bg-zinc-50" />}
+    >
+      <RegisterForm />
+    </Suspense>
   );
 }

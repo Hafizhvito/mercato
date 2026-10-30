@@ -7,6 +7,9 @@ const nextConfig: NextConfig = {
   cacheComponents: true,
   partialPrefetching: true,
   images: {
+    dangerouslyAllowSVG: true,
+    contentDispositionType: "attachment",
+    contentSecurityPolicy: "default-src 'self'; script-src 'none'; sandbox;",
     formats: ["image/avif", "image/webp"],
     remotePatterns: [
       {
@@ -16,10 +19,6 @@ const nextConfig: NextConfig = {
       {
         protocol: "https",
         hostname: "**.r2.dev",
-      },
-      {
-        protocol: "https",
-        hostname: "images.unsplash.com",
       },
       {
         protocol: "https",
