@@ -38,6 +38,8 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
   };
 }
 
+export const instant = false;
+
 export default async function OrderConfirmationPage({ params, searchParams }: Props) {
   const { locale, orderNumber } = await params;
   const { token } = (await searchParams) ?? {};

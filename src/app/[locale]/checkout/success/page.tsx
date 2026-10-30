@@ -12,6 +12,8 @@ interface Props {
   }>;
 }
 
+export const instant = false;
+
 export default async function CheckoutSuccessPage({ params, searchParams }: Props) {
   const { locale } = await params;
   const search = await searchParams;
