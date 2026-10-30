@@ -74,6 +74,7 @@ Fill in your configuration values:
 3. **UPSTASH_REDIS_REST_URL & UPSTASH_REDIS_REST_TOKEN:** REST credentials from your Upstash Redis database console.
 4. **BETTER_AUTH_SECRET:** A random 32-character string for signing session tokens.
 5. **BETTER_AUTH_URL & NEXT_PUBLIC_APP_URL:** Defaults to `http://localhost:3000` for local development.
+6. **Object Storage (R2 / S3 - Optional):** `R2_ACCOUNT_ID`, `R2_ACCESS_KEY_ID`, `R2_SECRET_ACCESS_KEY`, `R2_BUCKET_NAME`, and `NEXT_PUBLIC_R2_PUBLIC_URL`. If unset, storage automatically falls back to local disk storage (`public/uploads/`).
 
 ### 3. Database Migrations
 

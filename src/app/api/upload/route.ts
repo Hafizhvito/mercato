@@ -1,6 +1,7 @@
 import { headers } from "next/headers";
 import { type NextRequest, NextResponse } from "next/server";
 import { auth } from "@/lib/auth";
+import { uploadRateLimiter } from "@/lib/cache/ratelimit";
 import {
   ALLOWED_MIME_TYPES,
   type AllowedMimeType,
@@ -25,6 +26,14 @@ export async function POST(req: NextRequest) {
         session.user.role !== "staff")
     ) {
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+    }
+
+    const rateLimitResult = await uploadRateLimiter.limit(`upload:${session.user.id}`);
+    if (!rateLimitResult.success) {
+      return NextResponse.json(
+        { error: "Upload rate limit exceeded. Please wait a moment." },
+        { status: 429 },
+      );
     }
 
     const formData = await req.formData();
