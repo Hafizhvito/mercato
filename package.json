@@ -20,6 +20,8 @@
     "db:push": "drizzle-kit push",
     "db:seed": "tsx --env-file=.env.local src/lib/db/seed.ts",
     "db:seed:catalog": "tsx --env-file=.env.local src/lib/db/seed-catalog.ts",
+    "db:import-regions": "tsx --env-file=.env.local src/lib/shipping/import-indonesian-regions.ts",
+    "db:cleanup-legacy-admin": "tsx --env-file=.env.local src/lib/db/cleanup-legacy-admin.ts",
     "db:studio": "drizzle-kit studio",
     "prepare": "husky"
   },
@@ -28,6 +30,7 @@
     "@aws-sdk/s3-request-presigner": "3.1160.0",
     "@better-auth/drizzle-adapter": "1.7.14",
     "@hookform/resolvers": "6.0.2",
+    "@react-email/components": "1.0.12",
     "@t3-oss/env-nextjs": "0.13.11",
     "@upstash/ratelimit": "2.2.0",
     "@upstash/redis": "1.40.0",
@@ -44,6 +47,8 @@
     "react": "19.3.1",
     "react-dom": "19.3.1",
     "react-hook-form": "7.91.0",
+    "resend": "6.35.0",
+    "stripe": "23.1.0",
     "tailwind-merge": "3.7.0",
     "tailwindcss": "4.3.3",
     "zod": "4.6.7"
@@ -59,6 +64,7 @@
     "drizzle-kit": "0.31.11",
     "husky": "^9.1.7",
     "lint-staged": "^17.6.0",
+    "msw": "3.0.3",
     "pino-pretty": "13.2.0",
     "postcss": "8.5.32",
     "tsx": "4.23.15",

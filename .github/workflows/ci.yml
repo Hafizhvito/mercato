@@ -41,6 +41,13 @@ jobs:
     steps:
       - name: Checkout repository
         uses: actions/checkout@v7
+        with:
+          fetch-depth: 0
+
+      - name: Run Gitleaks Secret Scanner
+        uses: gitleaks/gitleaks-action@v2
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
       - name: Install pnpm
         uses: pnpm/action-setup@v6
@@ -64,7 +71,7 @@ jobs:
         run: pnpm db:migrate:test
 
       - name: Run unit and integration tests
-        run: pnpm test
+        run: pnpm test -- --reporter=verbose
 
       - name: Production build
         run: pnpm build

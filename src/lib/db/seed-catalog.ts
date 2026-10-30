@@ -6,6 +6,14 @@ import { catalogService } from "@/modules/catalog/service";
 async function seedCatalog() {
   console.log("Starting Mercato Catalog Seed...");
 
+  if (process.env.NODE_ENV === "production" && process.env.ALLOW_PRODUCTION_SEED !== "true") {
+    console.error(
+      "\nSecurity Violation: Seeding is strictly prohibited in production environments.\n" +
+        "To override for disaster recovery, set ALLOW_PRODUCTION_SEED=true explicitly.\n",
+    );
+    process.exit(1);
+  }
+
   // 1. Resolve Primary Store
   let [store] = await db
     .select()
@@ -34,6 +42,10 @@ async function seedCatalog() {
 
   // Clean existing store products to provide pristine, idempotent seed
   console.log("Cleaning previous catalog seed data for store...");
+  await db.delete(schema.cartItems);
+  await db.delete(schema.carts).where(eq(schema.carts.storeId, storeId));
+  await db.delete(schema.stockReservations).where(eq(schema.stockReservations.storeId, storeId));
+  await db.delete(schema.orders).where(eq(schema.orders.storeId, storeId));
   await db.delete(schema.products).where(eq(schema.products.storeId, storeId));
 
   // 2. Categories
@@ -586,6 +598,18 @@ async function seedCatalog() {
       value: 10,
       minSpend: 50000,
       maxDiscount: 100000,
+      startsAt: new Date(Date.now() - 24 * 60 * 60 * 1000),
+      expiresAt: new Date(Date.now() + 365 * 24 * 60 * 60 * 1000),
+      usageLimit: 1000,
+      isActive: true,
+    },
+    {
+      storeId,
+      code: "HEMAT10",
+      type: "percentage",
+      value: 10,
+      minSpend: 50000,
+      maxDiscount: 50000,
       startsAt: new Date(Date.now() - 24 * 60 * 60 * 1000),
       expiresAt: new Date(Date.now() + 365 * 24 * 60 * 60 * 1000),
       usageLimit: 1000,

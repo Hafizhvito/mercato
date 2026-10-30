@@ -185,4 +185,60 @@ describe("Phase 3 Integration: Cart & Price Revalidation", () => {
     const guestCartAfter = await cartRepository.findCart(storeId, { guestToken });
     expect(guestCartAfter).toBeNull();
   });
+
+  it("caps quantity to MAX_CART_ITEM_QUANTITY (10) when user adds 30 units and notifies reason", async () => {
+    const guestToken = `guest-cap-${crypto.randomUUID()}`;
+    const cart = await cartService.getOrCreateCart(storeId, { guestToken });
+
+    // Directly insert quantity 30 into raw cart_items
+    await cartRepository.addItem({
+      cartId: cart.id,
+      productId,
+      variantId,
+      quantity: 30, // Exceeds platform maximum of 10
+      unitPrice: initialPrice,
+    });
+
+    const detailed = await cartService.getDetailedCart(storeId, { guestToken });
+    expect(detailed.items[0]?.quantity).toBe(10); // Capped at 10
+    expect(detailed.cappedItems.length).toBe(1);
+    expect(detailed.cappedItems[0]?.reason).toBe("MAX_ORDER_LIMIT");
+    expect(detailed.cappedItems[0]?.requestedQuantity).toBe(30);
+    expect(detailed.cappedItems[0]?.cappedQuantity).toBe(10);
+  });
+
+  it("caps quantity to available stock when stock is lower than requested quantity", async () => {
+    // Provision variant with only 4 units in stock
+    const lowStockProduct = await catalogService.createProductWithVariants(storeId, {
+      name: "Limited Stock Coffee",
+      status: "published",
+      variants: [
+        {
+          sku: `SKU-LOW-${Date.now()}`,
+          title: "Low Stock Variant",
+          price: 50_000,
+          stock: 4, // Only 4 units available
+        },
+      ],
+    });
+    const lowVariantId = lowStockProduct.variants[0]!.id;
+
+    const guestToken = `guest-lowstock-${crypto.randomUUID()}`;
+    const cart = await cartService.getOrCreateCart(storeId, { guestToken });
+
+    // Directly insert quantity 8 (more than 4 in stock)
+    await cartRepository.addItem({
+      cartId: cart.id,
+      productId: lowStockProduct.id,
+      variantId: lowVariantId,
+      quantity: 8,
+      unitPrice: 50_000,
+    });
+
+    const detailed = await cartService.getDetailedCart(storeId, { guestToken });
+    expect(detailed.items[0]?.quantity).toBe(4); // Capped to available stock of 4
+    expect(detailed.cappedItems.length).toBe(1);
+    expect(detailed.cappedItems[0]?.reason).toBe("INSUFFICIENT_STOCK");
+    expect(detailed.cappedItems[0]?.cappedQuantity).toBe(4);
+  });
 });

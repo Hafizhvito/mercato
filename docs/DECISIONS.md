@@ -183,3 +183,24 @@ This document records the architectural and engineering decisions made for the M
 * **Context:** The Indonesian e-commerce market requires localized address hierarchy (Province -> Regency/City -> District -> Postal Code) and integration with domestic logistics providers (JNE, SiCepat, POS Indonesia). Coupling checkout directly to external courier APIs introduces external latency and downtime vulnerabilities during storefront checkout.
 * **Decision:** Implement a `ShippingProvider` interface with a primary deterministic `FlatRateShippingProvider` (providing tiered Regular, Express, and Same-Day options with volumetric calculation) and an extensible `RajaOngkirShippingProvider` for live API integration. Address lookups utilize an in-memory hierarchical dataset sourced from the open Kemendagri administrative boundary registry (MIT licensed), enabling instant, zero-latency cascading dropdowns in the checkout UI without external network calls.
 * **Consequences:** Checkout retains sub-50ms address validation and shipping calculation latency, operates reliably even during third-party courier API outages, and complies fully with commercial licensing requirements.
+
+---
+
+## ADR 0021: Hosted Stripe Checkout and IDR Minor Unit Handling
+
+* **Status:** Accepted
+* **Context:** Accepting credit and debit cards globally requires rigorous PCI-DSS compliance and 3D Secure 2.0 (SCA) authentication. Custom client-side card inputs drastically expand compliance scope to SAQ A-EP or SAQ D, requiring onerous external audits and sensitive tokenization handling. Furthermore, Stripe's API treats Indonesian Rupiah (IDR) as a two-decimal currency requiring amounts in minor subunits (multiplied by 100, e.g. Rp 10.000 = `1000000`), whereas domestic systems (like Midtrans) treat 1 IDR = 1 unit.
+* **Decision:** Implement card payments using hosted Stripe Checkout Sessions (`mode: 'payment'`), redirecting customers to Stripe-hosted portals with customized branding and redirecting back to Mercato return routes (`/checkout/success`, `/checkout/failed`). Implement explicit bi-directional subunit adapters (`toStripeAmount()` and `fromStripeAmount()`) within the `StripePaymentProvider` to handle Stripe's IDR hundredth-subunit requirement while maintaining Mercato's internal integer minor unit model. Webhooks verify cryptographic authenticity using HMAC SHA-256 via Stripe's official SDK with raw request bodies.
+* **Consequences:** Reduces merchant PCI-DSS scope to the simplest SAQ A profile, delegates 3DS2 biometric authentication to Stripe, prevents currency conversion discrepancies, and ensures bulletproof signature verification.
+
+---
+
+## ADR 0022: Midtrans Snap Integration and Late Payment Policy
+
+* **Status:** Accepted
+* **Context:** The Indonesian commerce ecosystem relies heavily on QRIS, e-Wallets (GoPay, ShopeePay), and bank Virtual Accounts (BCA, Mandiri, BNI, BRI). Midtrans Snap provides an omnichannel redirect/modal solution. However, asynchronous payment rails (Virtual Accounts and convenience stores) frequently suffer from "late payments"—a customer transfers funds after the 15-minute checkout reservation TTL has expired and the order status has automatically transitioned to `cancelled`.
+* **Decision:** Integrate Midtrans Snap via server-to-server transaction tokens and SHA-512 signature hashing (`SHA-512(order_id + status_code + gross_amount + server_key)`). Establish a deterministic, automated late payment policy executed inside interactive database transactions:
+  1. When a valid `settlement` webhook arrives for an order in `cancelled` status, the system checks whether inventory for all line items is still available.
+  2. If stock is available: the system re-reserves and commits the inventory, revives the order status directly from `cancelled` to `paid`, and dispatches a payment confirmation email.
+  3. If stock has been exhausted by another customer: the system automatically triggers an immediate refund call via the Midtrans API (`/v2/:order_id/refund`), records a `refunds` entry, logs an audit entry, and maintains the order in `refunded` state.
+* **Consequences:** Maximizes revenue retention from delayed payments without risking overselling or manual customer support intervention, providing an automated, fair resolution for edge-case payment races.

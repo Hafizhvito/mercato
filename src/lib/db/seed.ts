@@ -8,16 +8,45 @@ import * as schema from "@/lib/db/schema";
 async function main() {
   console.log("Starting Mercato database seed process...");
 
-  const adminEmail = process.env.SEED_ADMIN_EMAIL;
+  if (process.env.NODE_ENV === "production" && process.env.ALLOW_PRODUCTION_SEED !== "true") {
+    console.error(
+      "\nSecurity Violation: Seeding is strictly prohibited in production environments.\n" +
+        "To override for disaster recovery, set ALLOW_PRODUCTION_SEED=true explicitly.\n",
+    );
+    process.exit(1);
+  }
+
+  const adminEmail = process.env.SEED_ADMIN_EMAIL?.trim();
   const adminPassword = process.env.SEED_ADMIN_PASSWORD;
-  const adminName = process.env.SEED_ADMIN_NAME ?? "Mercato Owner";
+  const adminName = process.env.SEED_ADMIN_NAME?.trim() ?? "Mercato Administrator";
 
   if (!adminEmail || !adminPassword) {
     console.error(
-      "\nError: Admin credentials must not be hardcoded.\n" +
+      "\nConfiguration Error: Administrator credentials are required for seeding.\n" +
         "Please provide SEED_ADMIN_EMAIL and SEED_ADMIN_PASSWORD via environment variables or .env.local.\n" +
+        "Default credentials are intentionally prohibited.\n" +
         "Example:\n" +
-        '  SEED_ADMIN_EMAIL="admin@mercato.local" SEED_ADMIN_PASSWORD="YourSecurePassword123!" pnpm db:seed\n',
+        '  SEED_ADMIN_EMAIL="owner@example.com" SEED_ADMIN_PASSWORD="<strong-password-at-least-12-chars>" pnpm db:seed\n',
+    );
+    process.exit(1);
+  }
+
+  // Enforce password strength: at least 12 characters and mixed character classes
+  if (adminPassword.length < 12) {
+    console.error(
+      "\nValidation Error: SEED_ADMIN_PASSWORD must be at least 12 characters in length.\n",
+    );
+    process.exit(1);
+  }
+
+  const hasUpper = /[A-Z]/.test(adminPassword);
+  const hasLower = /[a-z]/.test(adminPassword);
+  const hasNumber = /[0-9]/.test(adminPassword);
+  const hasSymbol = /[^A-Za-z0-9]/.test(adminPassword);
+
+  if (!hasUpper || !hasLower || !hasNumber || !hasSymbol) {
+    console.error(
+      "\nValidation Error: SEED_ADMIN_PASSWORD must contain mixed character classes (uppercase, lowercase, numbers, and symbols).\n",
     );
     process.exit(1);
   }

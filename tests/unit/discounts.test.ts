@@ -152,4 +152,37 @@ describe("Discount Engine Unit Tests", () => {
     expect(res.valid).toBe(false);
     expect(res.reason).toMatch(/usage limit/);
   });
+
+  it("evaluates HEMAT10 demo code accurately", async () => {
+    const mockHemat10 = createMockDiscount({
+      code: "HEMAT10",
+      type: "percentage",
+      value: 10,
+      minSpend: 50_000,
+      maxDiscount: 50_000,
+    });
+    service.getDiscountByCode = async () => mockHemat10;
+
+    const res = await service.validateAndCalculate({
+      storeId: "store-1",
+      code: "HEMAT10",
+      subtotalMinor: 150_000,
+    });
+
+    expect(res.valid).toBe(true);
+    expect(res.discountAmountMinor).toBe(15_000); // 10% of 150.000
+  });
+
+  it("provides clear error message when coupon code is unknown or not found", async () => {
+    service.getDiscountByCode = async () => null;
+
+    const res = await service.validateAndCalculate({
+      storeId: "store-1",
+      code: "UNKNOWN_CODE",
+      subtotalMinor: 100_000,
+    });
+
+    expect(res.valid).toBe(false);
+    expect(res.reason).toBe("Coupon code does not exist");
+  });
 });

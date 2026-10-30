@@ -4,6 +4,7 @@ import { db } from "@/lib/db";
 import * as schema from "@/lib/db/schema";
 import { discountService } from "@/modules/discounts/service";
 import { inventoryService } from "@/modules/inventory/service";
+import { shippingService } from "@/modules/shipping/service";
 import type { NewOrder, Order, OrderItem, OrderStatus, ShippingAddress } from "./schema";
 import { validateOrderTransition } from "./state-machine";
 
@@ -161,6 +162,28 @@ export class OrderService {
         });
       }
 
+      // Recompute shipping rate server-side to guarantee integrity against client price tampering
+      const computedRates = await shippingService.calculateRates({
+        storeId: params.storeId,
+        destination: params.shippingAddress,
+        weightGrams: params.items.reduce((acc, it) => acc + it.quantity * 500, 500),
+        subtotalMinor: subtotal,
+      });
+
+      const matchedRate = computedRates.find(
+        (r) =>
+          r.carrier.toLowerCase() === params.shippingCarrier.toLowerCase() &&
+          r.service.toLowerCase() === params.shippingService.toLowerCase(),
+      );
+
+      if (!matchedRate) {
+        throw new Error(
+          `Invalid or unsupported shipping method '${params.shippingCarrier} ${params.shippingService}' for destination`,
+        );
+      }
+
+      let verifiedShippingAmount = matchedRate.costMinor;
+
       // Handle discount calculation and atomic usage
       let discountAmount = 0;
       let appliedDiscountId: string | null = null;
@@ -170,12 +193,16 @@ export class OrderService {
           storeId: params.storeId,
           code: params.discountCode,
           subtotalMinor: subtotal,
-          shippingAmountMinor: params.shippingAmountMinor,
+          shippingAmountMinor: verifiedShippingAmount,
         });
 
         if (discountCheck.valid && discountCheck.discount) {
           discountAmount = discountCheck.discountAmountMinor;
           appliedDiscountId = discountCheck.discount.id;
+
+          if (discountCheck.discount.type === "free_shipping") {
+            verifiedShippingAmount = 0;
+          }
 
           const incremented = await discountService.incrementUsage(discountCheck.discount.id, tx);
           if (!incremented) {
@@ -184,8 +211,9 @@ export class OrderService {
         }
       }
 
-      const totalAmount = Math.max(0, subtotal - discountAmount + params.shippingAmountMinor);
+      const totalAmount = Math.max(0, subtotal - discountAmount + verifiedShippingAmount);
       const orderNumber = this.generateOrderNumber();
+      const guestAccessToken = crypto.randomBytes(32).toString("hex");
 
       const newOrderData: NewOrder = {
         orderNumber,
@@ -193,17 +221,19 @@ export class OrderService {
         customerId: params.customerId ?? null,
         guestEmail: params.guestEmail ?? null,
         status: "awaiting_payment",
+        paymentStatus: "unpaid",
         currency: "IDR",
         subtotal,
         discountAmount,
-        shippingAmount: params.shippingAmountMinor,
+        shippingAmount: verifiedShippingAmount,
         taxAmount: 0,
         totalAmount,
         discountId: appliedDiscountId,
-        shippingCarrier: params.shippingCarrier,
-        shippingService: params.shippingService,
+        shippingCarrier: matchedRate.carrier,
+        shippingService: matchedRate.service,
         shippingAddress: params.shippingAddress,
         billingAddress: params.billingAddress ?? null,
+        guestAccessToken,
         idempotencyKey: params.idempotencyKey,
         checkoutSessionId: params.checkoutSessionId,
       };
@@ -296,6 +326,39 @@ export class OrderService {
 
       return updatedOrder;
     });
+  }
+
+  /**
+   * Verifies that the requester has legitimate authorization to access the order (IDOR Protection)
+   */
+  async verifyOrderAccess(params: {
+    orderNumber: string;
+    storeId: string;
+    userId?: string | null;
+    userRole?: string | null;
+    token?: string | null;
+  }): Promise<{ authorized: boolean; order?: Order; reason?: string }> {
+    const order = await this.getOrderByNumber(params.orderNumber, params.storeId);
+    if (!order) {
+      return { authorized: false, reason: "NOT_FOUND" };
+    }
+
+    // 1. Administrative roles have full visibility
+    if (params.userRole && ["admin", "owner", "staff"].includes(params.userRole)) {
+      return { authorized: true, order };
+    }
+
+    // 2. Authenticated user who placed the order
+    if (params.userId && order.customerId && params.userId === order.customerId) {
+      return { authorized: true, order };
+    }
+
+    // 3. Guest lookup with unguessable cryptographic access token
+    if (params.token && order.guestAccessToken && params.token === order.guestAccessToken) {
+      return { authorized: true, order };
+    }
+
+    return { authorized: false, reason: "UNAUTHORIZED" };
   }
 }
 

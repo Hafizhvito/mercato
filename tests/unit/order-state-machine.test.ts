@@ -45,8 +45,11 @@ describe("Order State Machine Unit Tests", () => {
       "refunded",
     ];
 
+    // Cancelled orders can only transition to 'paid' (late payment policy upon stock re-reservation)
+    expect(canTransitionOrder("cancelled", "paid")).toBe(true);
+
     for (const status of allStatuses) {
-      if (status !== "cancelled") {
+      if (status !== "cancelled" && status !== "paid") {
         expect(canTransitionOrder("cancelled", status)).toBe(false);
         expect(() => validateOrderTransition("cancelled", status)).toThrow(
           /Illegal order state transition/,
