@@ -1,7 +1,38 @@
 import { describe, expect, it } from "vitest";
 import { DEFAULT_IMAGE_FALLBACK, isAllowedImageSrc } from "@/components/ui/SafeImage";
+import { ALLOWED_IMAGE_REMOTE_PATTERNS, isAllowedHostname } from "@/lib/media/image-hosts";
+import nextConfig from "../../next.config";
 
-describe("Item 14.d Unit: SafeImage Component & Fallback Guard", () => {
+describe("Item 12 & 14.d Unit: SafeImage Component & Single Source of Truth Allowlist", () => {
+  describe("Single Source of Truth Remote Patterns Integrity", () => {
+    it("ensures next.config remotePatterns are derived directly from ALLOWED_IMAGE_REMOTE_PATTERNS", () => {
+      const configRemotePatterns = nextConfig.images?.remotePatterns;
+      expect(configRemotePatterns).toBeDefined();
+      expect(configRemotePatterns?.length).toBe(ALLOWED_IMAGE_REMOTE_PATTERNS.length);
+
+      for (let i = 0; i < ALLOWED_IMAGE_REMOTE_PATTERNS.length; i++) {
+        const sourcePattern = ALLOWED_IMAGE_REMOTE_PATTERNS[i]!;
+        const nextPattern = configRemotePatterns?.[i];
+        expect(nextPattern?.hostname).toBe(sourcePattern.hostname);
+        expect(nextPattern?.protocol).toBe(sourcePattern.protocol);
+      }
+    });
+
+    it("verifies isAllowedHostname correctly matches wildcards and exact hostnames", () => {
+      expect(isAllowedHostname("mercato.r2.cloudflarestorage.com")).toBe(true);
+      expect(isAllowedHostname("sub.mercato.r2.cloudflarestorage.com")).toBe(true);
+      expect(isAllowedHostname("pub-12345.r2.dev")).toBe(true);
+      expect(isAllowedHostname("assets.mercato.local")).toBe(true);
+      expect(isAllowedHostname("localhost")).toBe(true);
+      expect(isAllowedHostname("127.0.0.1")).toBe(true);
+
+      // Rejects unlisted domains
+      expect(isAllowedHostname("images.unsplash.com")).toBe(false);
+      expect(isAllowedHostname("evil-storage.com")).toBe(false);
+      expect(isAllowedHostname("r2.dev.evil.com")).toBe(false);
+    });
+  });
+
   describe("isAllowedImageSrc Hostname Validation", () => {
     it("permits local relative paths", () => {
       expect(isAllowedImageSrc("/images/products/kemeja-batik-solo.svg")).toBe(true);

@@ -2,14 +2,7 @@
 
 import Image, { type ImageProps } from "next/image";
 import { useEffect, useState } from "react";
-
-const ALLOWED_HOST_PATTERNS = [
-  /\.r2\.cloudflarestorage\.com$/,
-  /\.r2\.dev$/,
-  /^assets\.mercato\.local$/,
-  /^localhost$/,
-  /^127\.0\.0\.1$/,
-];
+import { isAllowedHostname } from "@/lib/media/image-hosts";
 
 export function isAllowedImageSrc(src: unknown): boolean {
   if (typeof src !== "string" || !src.trim()) {
@@ -27,11 +20,10 @@ export function isAllowedImageSrc(src: unknown): boolean {
     return true;
   }
 
-  // Absolute URLs: parse host and verify against configured whitelist
+  // Absolute URLs: parse host and verify against configured single source of truth
   try {
     const parsed = new URL(trimmed);
-    const hostname = parsed.hostname.toLowerCase();
-    return ALLOWED_HOST_PATTERNS.some((pattern) => pattern.test(hostname));
+    return isAllowedHostname(parsed.hostname);
   } catch {
     return false;
   }
