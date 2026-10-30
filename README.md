@@ -142,9 +142,8 @@ Mercato integrates **Midtrans Snap** for domestic Indonesian payment methods (QR
    ```
 
 #### Key Format & Environment Matching:
-- **Server Keys:** In Sandbox, server keys typically start with `SB-Mid-server-`. In Production, server keys start with `Mid-server-`.
-- **Client Keys:** Sandbox client keys may start with either `SB-Mid-client-` or `Mid-client-` depending on MAP account provisioning date. You cannot rely solely on the prefix to detect sandbox mode for client keys.
-- **Environment Matching Requirement:** Both the Server Key and Client Key must be retrieved from the exact same environment toggle in the Midtrans Administration Portal (MAP), and paired with the corresponding endpoint (`https://api.sandbox.midtrans.com` vs `https://api.midtrans.com`). Mismatched keys or endpoints cause transaction token creation to be rejected with:
+- **Key Prefixes:** Key prefixes must not be used to tell environments apart.
+- **Environment Matching Requirement:** Both keys (Server Key and Client Key) must come from the same environment toggle in the Midtrans Administration Portal (MAP) and match the target API endpoint (`https://api.sandbox.midtrans.com` for Sandbox, `https://api.midtrans.com` for Production). Mismatched keys or endpoints cause transaction token creation to be rejected with:
   ```
   HTTP 401 Unauthorized: Access denied due to unauthorized transaction, please check client key or server key
   ```
@@ -224,7 +223,7 @@ Open [http://localhost:8288](http://localhost:8288) to inspect and trigger the `
   - Minimum charge: `0.50 IDR`
   - Maximum charge for non-card methods: `12 digits for IDR, for a maximum charge of 9,999,999,999.99 IDR ( 999999999999 )`
   - Under Zero-decimal currencies, IDR is not listed.
-  - **Implementation Status:** Stripe IDR processing is explicitly restricted in code pending verified merchant account support in Indonesia. IDR checkouts are handled through Midtrans.
+  - **Implementation Status:** IDR is refused in code until a Stripe account that supports IDR is verified.
 - **Late Payment Handling (Manual Review Default):** In domestic e-commerce, customers often complete bank Virtual Account transfers after the 15-minute reservation window has expired. If stock is still available, the order is automatically revived to `paid`. If stock has been exhausted by another customer, Mercato flags the order with `paymentStatus = "needs_review"`, records an audit log, and neutrally notifies the customer. Automatic provider refunds are **not** triggered unless explicitly enabled via `AUTO_REFUND_ON_STOCK_EXHAUSTED=true` (off by default).
 - **Payment Status Synchronization:** Customers and merchants can click **"Check payment status"** on the order page (`/orders/[orderNumber]`). It calls `getPaymentStatus` and applies the result through the exact same transition and idempotency path as webhooks, protected by rate limiting and guest token authorization.
 
@@ -234,14 +233,12 @@ Open [http://localhost:8288](http://localhost:8288) to inspect and trigger the `
 
 Mercato embeds the complete administrative hierarchy of Indonesia:
 - **38 Provinces**, **514 Regencies/Cities**, and **7,265 Districts**.
-- **Dataset License:** Sourced via [`cahyadsn/wilayah`](https://github.com/cahyadsn/wilayah) under the **MIT License** (Copyright (c) 2017-2025 Cahya DSN).
-- **Administrative Baseline:** Compiled in conformance with **Kepmendagri No. 300.2.2-2430 Tahun 2025** (and predecessor decrees 050-145/2022, 100.1.1-6117/2022, and Permendagri 72/2019).
+- **Government Source:** Kepmendagri No. 300.2.2-2430 Tahun 2025 (Kementerian Dalam Negeri Republik Indonesia).
+- **Compiler:** [`cahyadsn/wilayah`](https://github.com/cahyadsn/wilayah) (Cahya DSN).
+- **License:** [MIT License](https://github.com/cahyadsn/wilayah/blob/master/LICENSE) (Copyright (c) 2017-2025 Cahya DSN).
 - **RajaOngkir Courier Mapping:**
   - References: [Komerce RajaOngkir API](https://komerceapi.readme.io/reference/rajaongkir-api) and [RajaOngkir Documentation](https://rajaongkir.com/dokumentasi).
   - RajaOngkir uses proprietary sequential integer `city_id` numbers (1 to 501), not Kemendagri codes. The Starter tier exists historically for legacy accounts, while Komerce now provides the modern delivery API. When `RAJAONGKIR_API_KEY` is not provided, Mercato automatically falls back to `FlatRateShippingProvider` without throwing errors or breaking checkout.
-
-> [!NOTE]
-> **Statutory Notice (Not Legal Advice):** Under Indonesian Copyright Law (Undang-Undang Republik Indonesia Nomor 28 Tahun 2014 tentang Hak Cipta, Pasal 42 huruf b), official legislative enactments, government regulations, and public administrative boundaries reside in the public domain and are excluded from copyright protection. This notice is provided for informational and architectural context only and does not constitute formal legal advice.
 
 ---
 

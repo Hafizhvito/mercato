@@ -15,12 +15,15 @@ import { stripePaymentProvider } from "@/modules/payments/providers/stripe";
  * Stripe IDR processing is explicitly refused in code pending verification.
  */
 describe("Item 1 Unit: Stripe IDR Refusal & Standard Currency Pass-Through", () => {
-  it("explicitly refuses IDR amount conversion and throws an informative error", () => {
+  it("explicitly refuses IDR in toStripeAmount and throws an informative error", () => {
     expect(() => stripePaymentProvider.toStripeAmount(150_000, "IDR")).toThrow(
-      /Stripe IDR amount conversion is disabled pending verification/,
+      /IDR is refused in code until a Stripe account that supports IDR is verified/,
     );
+  });
+
+  it("explicitly refuses IDR in fromStripeAmount and throws an informative error", () => {
     expect(() => stripePaymentProvider.fromStripeAmount(15_000_000, "IDR")).toThrow(
-      /Stripe IDR amount conversion is disabled pending verification/,
+      /IDR is refused in code until a Stripe account that supports IDR is verified/,
     );
   });
 

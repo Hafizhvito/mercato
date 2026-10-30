@@ -51,14 +51,14 @@ export class StripePaymentProvider implements PaymentProvider {
   /**
    * Converts Mercato integer currency units to Stripe API amounts.
    *
-   * NOTE: Stripe IDR processing is explicitly refused in code pending verification.
+   * NOTE: IDR is refused in code until a Stripe account that supports IDR is verified.
    * Standard two-decimal currencies (USD, EUR, SGD, etc.) are passed through in minor units.
    */
   toStripeAmount(amountMinor: number, currency: string): number {
     const cur = currency.toUpperCase();
     if (cur === "IDR") {
       throw new Error(
-        "Stripe IDR amount conversion is disabled pending verification. Please use Midtrans.",
+        "IDR is refused in code until a Stripe account that supports IDR is verified. Please use Midtrans.",
       );
     }
     return amountMinor;
@@ -71,7 +71,7 @@ export class StripePaymentProvider implements PaymentProvider {
     const cur = currency.toUpperCase();
     if (cur === "IDR") {
       throw new Error(
-        "Stripe IDR amount conversion is disabled pending verification. Please use Midtrans.",
+        "IDR is refused in code until a Stripe account that supports IDR is verified. Please use Midtrans.",
       );
     }
     return stripeAmount;
@@ -84,7 +84,7 @@ export class StripePaymentProvider implements PaymentProvider {
 
     if (order.currency.toUpperCase() === "IDR") {
       throw new Error(
-        "Stripe payment provider is restricted from processing IDR orders until currency minor unit handling is verified. Please choose Midtrans for Indonesian Rupiah transactions.",
+        "IDR is refused in code until a Stripe account that supports IDR is verified. Please choose Midtrans for Indonesian Rupiah transactions.",
       );
     }
 

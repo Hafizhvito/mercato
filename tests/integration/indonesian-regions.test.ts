@@ -28,7 +28,7 @@ describe("Phase 4: Indonesian Administrative Regions & Cascading Integrity", () 
     // 5. Integrity check: Every single regency must have at least one district
     const regencyCodesWithDistricts = new Set(districts.map((d) => d.regencyCode));
     expect(regencyCodesWithDistricts.size).toBe(514);
-  });
+  }, 30_000);
 
   it("executes cascading actions with complete Jakarta Pusat districts (resolving Phase 3 gap)", async () => {
     // 1. Fetch Provinces

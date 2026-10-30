@@ -193,10 +193,10 @@ describe("Phase 4 Payments, Webhooks, Integrity, & Refunds Suite", () => {
   it("3. Stripe IDR Refusal: explicitly refuses IDR and passes through standard currencies", () => {
     // Stripe IDR processing is explicitly refused in code pending verification
     expect(() => stripePaymentProvider.toStripeAmount(150000, "IDR")).toThrow(
-      /Stripe IDR amount conversion is disabled pending verification/,
+      /IDR is refused in code until a Stripe account that supports IDR is verified/,
     );
     expect(() => stripePaymentProvider.fromStripeAmount(15000000, "IDR")).toThrow(
-      /Stripe IDR amount conversion is disabled pending verification/,
+      /IDR is refused in code until a Stripe account that supports IDR is verified/,
     );
 
     // USD is standard 2 decimal places (2500 cents = $25.00)
