@@ -45,4 +45,14 @@ describe("Item 12: Seeded Catalog & Collection Assets Verification", () => {
     expect(nextConfigContent).not.toContain("images.unsplash.com");
     expect(nextConfigContent).toContain("dangerouslyAllowSVG: true");
   });
+
+  it("verifies rewrite-legacy-images script exists with safety guards and confirmation requirement", () => {
+    const scriptPath = path.resolve(process.cwd(), "src/lib/db/rewrite-legacy-images.ts");
+    expect(fs.existsSync(scriptPath)).toBe(true);
+
+    const scriptContent = fs.readFileSync(scriptPath, "utf-8");
+    expect(scriptContent).toContain("--confirm");
+    expect(scriptContent).toContain("production");
+    expect(scriptContent).toContain("maskHost");
+  });
 });

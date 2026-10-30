@@ -1,10 +1,10 @@
 "use client";
 
 import { ArrowLeft, Loader2, Plus, Trash2, Upload } from "lucide-react";
-import Image from "next/image";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useState } from "react";
+import { SafeImage } from "@/components/ui/SafeImage";
 import { createProductAction, deleteProductAction, updateProductAction } from "../actions";
 import type { Category, Collection, ProductDetail } from "../repository";
 
@@ -391,8 +391,9 @@ export function ProductForm({ initialProduct, categories, collections }: Product
                   key={img.url}
                   className="group relative aspect-square overflow-hidden rounded-lg border border-zinc-200 bg-zinc-50"
                 >
-                  <Image
+                  <SafeImage
                     src={img.url}
+                    fallbackSrc="/images/placeholder.svg"
                     alt={img.altText}
                     fill
                     sizes="160px"

@@ -3,24 +3,20 @@ import createMiddleware from "next-intl/middleware";
 import { routing } from "@/i18n/routing";
 
 const handleIntl = createMiddleware(routing);
+const adminLocalizedRegex = new RegExp(`^/(?:${routing.locales.join("|")})/admin(/.*)?$`);
 
 export function proxy(req: NextRequest) {
   const { pathname } = req.nextUrl;
 
-  // Intercept any localized admin access and redirect to the unlocalized merchant admin console
-  if (
-    pathname === "/en/admin" ||
-    pathname.startsWith("/en/admin/") ||
-    pathname === "/id/admin" ||
-    pathname.startsWith("/id/admin/")
-  ) {
-    const unlocalizedPath = pathname.replace(/^\/(?:en|id)/, "");
+  // Intercept any localized admin access (/en/admin/* or /id/admin/*) and redirect to unlocalized back-office console
+  const match = pathname.match(adminLocalizedRegex);
+  if (match) {
     const redirectUrl = req.nextUrl.clone();
-    redirectUrl.pathname = unlocalizedPath;
+    redirectUrl.pathname = `/admin${match[1] || ""}`;
     return NextResponse.redirect(redirectUrl, 307);
   }
 
-  // Bypass next-intl completely for direct admin paths
+  // Bypass next-intl completely for direct merchant admin paths
   if (pathname === "/admin" || pathname.startsWith("/admin/")) {
     return NextResponse.next();
   }

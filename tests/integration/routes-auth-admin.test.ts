@@ -83,6 +83,20 @@ describe("Item 11 Integration: Storefront Auth & Back-Office Admin Routing Suite
         expect(res.headers.get("location")).toBe(to);
       }
     });
+
+    it("verifies HTTP redirect status 307 and location target /admin/dashboard for /en/admin/dashboard", async () => {
+      try {
+        const res = await fetch("http://localhost:3000/en/admin/dashboard", { redirect: "manual" });
+        expect(res.status).toBe(307);
+        expect(res.headers.get("location")).toMatch(/\/admin\/dashboard$/);
+      } catch {
+        // Fallback when dev server is not running in CI runner
+        const req = new NextRequest("http://localhost:3000/en/admin/dashboard");
+        const res = proxy(req);
+        expect(res.status).toBe(307);
+        expect(res.headers.get("location")).toMatch(/\/admin\/dashboard$/);
+      }
+    });
   });
 
   describe("File System Structure and Architecture Integrity", () => {

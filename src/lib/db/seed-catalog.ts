@@ -1,4 +1,4 @@
-import { eq } from "drizzle-orm";
+import { and, eq } from "drizzle-orm";
 import { db } from "@/lib/db";
 import * as schema from "@/lib/db/schema";
 import { catalogService } from "@/modules/catalog/service";
@@ -40,14 +40,6 @@ async function seedCatalog() {
   const storeId = store.id;
   console.log(`Using Store: ${store.name} (${storeId})`);
 
-  // Clean existing store products to provide pristine, idempotent seed
-  console.log("Cleaning previous catalog seed data for store...");
-  await db.delete(schema.cartItems);
-  await db.delete(schema.carts).where(eq(schema.carts.storeId, storeId));
-  await db.delete(schema.stockReservations).where(eq(schema.stockReservations.storeId, storeId));
-  await db.delete(schema.orders).where(eq(schema.orders.storeId, storeId));
-  await db.delete(schema.products).where(eq(schema.products.storeId, storeId));
-
   // 2. Categories
   const categoryData = [
     {
@@ -87,10 +79,18 @@ async function seedCatalog() {
     const [existing] = await db
       .select({ id: schema.categories.id })
       .from(schema.categories)
-      .where(eq(schema.categories.slug, cat.slug))
+      .where(and(eq(schema.categories.storeId, storeId), eq(schema.categories.slug, cat.slug)))
       .limit(1);
 
     if (existing) {
+      await db
+        .update(schema.categories)
+        .set({
+          name: cat.name,
+          description: cat.description,
+          updatedAt: new Date(),
+        })
+        .where(eq(schema.categories.id, existing.id));
       categoryMap.set(cat.slug, existing.id);
     } else {
       const [newCat] = await db
@@ -139,10 +139,19 @@ async function seedCatalog() {
     const [existing] = await db
       .select({ id: schema.collections.id })
       .from(schema.collections)
-      .where(eq(schema.collections.slug, col.slug))
+      .where(and(eq(schema.collections.storeId, storeId), eq(schema.collections.slug, col.slug)))
       .limit(1);
 
     if (existing) {
+      await db
+        .update(schema.collections)
+        .set({
+          name: col.name,
+          description: col.description,
+          imageUrl: col.imageUrl,
+          updatedAt: new Date(),
+        })
+        .where(eq(schema.collections.id, existing.id));
       collectionMap.set(col.slug, existing.id);
     } else {
       const [newCol] = await db
@@ -511,14 +520,68 @@ async function seedCatalog() {
       position: idx,
     }));
 
-    // Check if product already exists by exact name in store
+    // Derive deterministic product slug
+    const productSlug = item.name
+      .toLowerCase()
+      .trim()
+      .replace(/[^\w\s-]/g, "")
+      .replace(/[\s_-]+/g, "-")
+      .replace(/^-+|-+$/g, "");
+
+    // Check if product already exists by slug in store
     const [existingProd] = await db
       .select({ id: schema.products.id })
       .from(schema.products)
-      .where(eq(schema.products.name, item.name))
+      .where(and(eq(schema.products.storeId, storeId), eq(schema.products.slug, productSlug)))
       .limit(1);
 
-    if (!existingProd) {
+    if (existingProd) {
+      // 1. Update product info
+      await db
+        .update(schema.products)
+        .set({
+          name: item.name,
+          description: item.description,
+          categoryId,
+          status: "published",
+          seoTitle: `${item.name} | Mercato`,
+          seoDescription: item.description.slice(0, 160),
+          updatedAt: new Date(),
+        })
+        .where(eq(schema.products.id, existingProd.id));
+
+      // 2. Synchronize product images (replace with latest local seed images)
+      await db
+        .delete(schema.productImages)
+        .where(eq(schema.productImages.productId, existingProd.id));
+
+      if (images.length > 0) {
+        await db.insert(schema.productImages).values(
+          images.map((img) => ({
+            productId: existingProd.id,
+            url: img.url,
+            altText: img.altText,
+            position: img.position,
+          })),
+        );
+      }
+
+      // 3. Synchronize collection associations
+      await db
+        .delete(schema.productsToCollections)
+        .where(eq(schema.productsToCollections.productId, existingProd.id));
+
+      if (collectionIds.length > 0) {
+        await db.insert(schema.productsToCollections).values(
+          collectionIds.map((cid) => ({
+            productId: existingProd.id,
+            collectionId: cid,
+          })),
+        );
+      }
+
+      seededCount++;
+    } else {
       await catalogService.createProductWithVariants(storeId, {
         name: item.name,
         description: item.description,

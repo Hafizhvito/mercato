@@ -1,11 +1,11 @@
 "use client";
 
 import { AlertTriangle, ArrowRight, Minus, Plus, ShoppingBag, Trash2 } from "lucide-react";
-import Image from "next/image";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useTranslations } from "next-intl";
 import { useState, useTransition } from "react";
+import { SafeImage } from "@/components/ui/SafeImage";
 import { createMoney, formatMoney } from "@/lib/money";
 import { removeCartItemAction, updateCartItemQuantityAction } from "@/modules/cart/actions";
 import type { DetailedCart } from "@/modules/cart/service";
@@ -158,7 +158,13 @@ export function CartView({ initialCart, locale }: Props) {
             <div key={item.id} className="py-6 flex gap-4 sm:gap-6">
               <div className="h-24 w-24 shrink-0 overflow-hidden rounded-xl border border-zinc-200 bg-zinc-100 relative">
                 {item.imageUrl ? (
-                  <Image src={item.imageUrl} alt={item.name} fill className="object-cover" />
+                  <SafeImage
+                    src={item.imageUrl}
+                    fallbackSrc="/images/placeholder.svg"
+                    alt={item.name}
+                    fill
+                    className="object-cover"
+                  />
                 ) : (
                   <div className="h-full w-full flex items-center justify-center text-zinc-400">
                     <ShoppingBag className="h-8 w-8" />

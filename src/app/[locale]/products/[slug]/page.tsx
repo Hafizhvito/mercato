@@ -1,12 +1,12 @@
 import { Package, RotateCcw, ShieldCheck, Truck } from "lucide-react";
 import type { Metadata } from "next";
 import { unstable_cacheTag as cacheTag } from "next/cache";
-import Image from "next/image";
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import { setRequestLocale } from "next-intl/server";
 import { StorefrontHeader } from "@/components/storefront/Header";
 import { ProductPurchaseSection } from "@/components/storefront/ProductPurchaseSection";
+import { SafeImage } from "@/components/ui/SafeImage";
 import { db } from "@/lib/db";
 import * as schema from "@/lib/db/schema";
 import { catalogRepository } from "@/modules/catalog/repository";
@@ -135,8 +135,9 @@ export default async function ProductDetailPage({ params }: ProductPageProps) {
           <div className="space-y-4">
             <div className="aspect-square w-full overflow-hidden rounded-2xl border border-zinc-200 bg-zinc-50 relative flex items-center justify-center">
               {product.images[0]?.url ? (
-                <Image
+                <SafeImage
                   src={product.images[0].url}
+                  fallbackSrc="/images/placeholder.svg"
                   alt={product.images[0].altText || product.name}
                   fill
                   priority
@@ -156,8 +157,9 @@ export default async function ProductDetailPage({ params }: ProductPageProps) {
                     key={img.id ?? `${img.url}-${idx}`}
                     className="aspect-square overflow-hidden rounded-lg border border-zinc-200 bg-zinc-50 relative"
                   >
-                    <Image
+                    <SafeImage
                       src={img.url}
+                      fallbackSrc="/images/placeholder.svg"
                       alt={img.altText || product.name}
                       fill
                       sizes="120px"

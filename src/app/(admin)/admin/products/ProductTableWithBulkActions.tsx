@@ -1,9 +1,9 @@
 "use client";
 
 import { Check, Package, Trash2 } from "lucide-react";
-import Image from "next/image";
 import Link from "next/link";
 import { useState, useTransition } from "react";
+import { SafeImage } from "@/components/ui/SafeImage";
 import { createMoney, formatMoney } from "@/lib/money";
 import { bulkDeleteProductsAction, bulkUpdateProductStatusAction } from "@/modules/catalog/actions";
 import type { ProductDetail } from "@/modules/catalog/repository";
@@ -188,8 +188,9 @@ export function ProductTableWithBulkActions({ products }: Props) {
                     <div className="flex items-center gap-3">
                       <div className="h-12 w-12 shrink-0 overflow-hidden rounded-lg border border-zinc-200 bg-zinc-100 flex items-center justify-center relative">
                         {primaryImg ? (
-                          <Image
+                          <SafeImage
                             src={primaryImg}
+                            fallbackSrc="/images/placeholder.svg"
                             alt={product.name}
                             fill
                             sizes="48px"

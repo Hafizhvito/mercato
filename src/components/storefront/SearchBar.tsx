@@ -1,10 +1,10 @@
 "use client";
 
 import { Loader2, Search } from "lucide-react";
-import Image from "next/image";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useEffect, useRef, useState } from "react";
+import { SafeImage } from "@/components/ui/SafeImage";
 import type { AutocompleteResult } from "@/lib/search";
 
 interface SearchBarProps {
@@ -102,8 +102,9 @@ export function SearchBar({ locale, initialQuery = "" }: SearchBarProps) {
               >
                 <div className="h-10 w-10 shrink-0 overflow-hidden rounded-md border border-zinc-200 bg-zinc-100 relative">
                   {item.primaryImage ? (
-                    <Image
+                    <SafeImage
                       src={item.primaryImage}
+                      fallbackSrc="/images/placeholder.svg"
                       alt={item.name}
                       fill
                       sizes="40px"

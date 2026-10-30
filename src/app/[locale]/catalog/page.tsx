@@ -1,10 +1,10 @@
 import { ArrowUpDown, Package, SlidersHorizontal } from "lucide-react";
 import type { Metadata } from "next";
-import Image from "next/image";
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import { setRequestLocale } from "next-intl/server";
 import { StorefrontHeader } from "@/components/storefront/Header";
+import { SafeImage } from "@/components/ui/SafeImage";
 import { db } from "@/lib/db";
 import * as schema from "@/lib/db/schema";
 import { createMoney, formatMoney } from "@/lib/money";
@@ -280,8 +280,9 @@ export default async function StorefrontCatalogPage({ params, searchParams }: Ca
                     {/* Image Container */}
                     <div className="aspect-square w-full overflow-hidden bg-zinc-100 flex items-center justify-center relative">
                       {product.primaryImage ? (
-                        <Image
+                        <SafeImage
                           src={product.primaryImage}
+                          fallbackSrc="/images/placeholder.svg"
                           alt={product.name}
                           fill
                           sizes="(max-width: 640px) 50vw, (max-width: 1024px) 33vw, 25vw"
