@@ -575,7 +575,59 @@ async function seedCatalog() {
   }
 
   console.log(`Seeded ${seededCount} new products across ${categoryData.length} categories.`);
-  console.log("Catalog seed completed successfully.");
+
+  // 4. Seed Promotional Discounts
+  console.log("Seeding promotional discount coupons...");
+  const discountCodes = [
+    {
+      storeId,
+      code: "MERCATO10",
+      type: "percentage",
+      value: 10,
+      minSpend: 50000,
+      maxDiscount: 100000,
+      startsAt: new Date(Date.now() - 24 * 60 * 60 * 1000),
+      expiresAt: new Date(Date.now() + 365 * 24 * 60 * 60 * 1000),
+      usageLimit: 1000,
+      isActive: true,
+    },
+    {
+      storeId,
+      code: "HEMAT20RB",
+      type: "fixed",
+      value: 20000,
+      minSpend: 100000,
+      startsAt: new Date(Date.now() - 24 * 60 * 60 * 1000),
+      expiresAt: new Date(Date.now() + 365 * 24 * 60 * 60 * 1000),
+      usageLimit: 500,
+      isActive: true,
+    },
+    {
+      storeId,
+      code: "GRATISONGKIR",
+      type: "free_shipping",
+      value: 0,
+      minSpend: 75000,
+      startsAt: new Date(Date.now() - 24 * 60 * 60 * 1000),
+      expiresAt: new Date(Date.now() + 365 * 24 * 60 * 60 * 1000),
+      usageLimit: 2000,
+      isActive: true,
+    },
+  ];
+
+  for (const disc of discountCodes) {
+    const [existing] = await db
+      .select({ id: schema.discounts.id })
+      .from(schema.discounts)
+      .where(eq(schema.discounts.code, disc.code))
+      .limit(1);
+
+    if (!existing) {
+      await db.insert(schema.discounts).values(disc);
+    }
+  }
+
+  console.log("Catalog and discounts seed completed successfully.");
   process.exit(0);
 }
 

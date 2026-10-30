@@ -1,4 +1,5 @@
 import { ArrowUpDown, Package, SlidersHorizontal } from "lucide-react";
+import type { Metadata } from "next";
 import Image from "next/image";
 import Link from "next/link";
 import { notFound } from "next/navigation";
@@ -23,6 +24,27 @@ interface CatalogPageProps {
     sort?: "relevance" | "price_asc" | "price_desc" | "newest";
     page?: string;
   }>;
+}
+
+export async function generateMetadata({ params }: CatalogPageProps): Promise<Metadata> {
+  const { locale } = await params;
+  return {
+    title: "Catalog | Mercato",
+    description: "Browse premium handcrafted Indonesian products, specialty coffees, and goods.",
+    alternates: {
+      canonical: `/${locale}/catalog`,
+    },
+    openGraph: {
+      title: "Catalog | Mercato",
+      description: "Browse premium handcrafted Indonesian products, specialty coffees, and goods.",
+      type: "website",
+    },
+    twitter: {
+      card: "summary_large_image",
+      title: "Catalog | Mercato",
+      description: "Browse premium handcrafted Indonesian products, specialty coffees, and goods.",
+    },
+  };
 }
 
 export default async function StorefrontCatalogPage({ params, searchParams }: CatalogPageProps) {

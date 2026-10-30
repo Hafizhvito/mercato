@@ -114,12 +114,12 @@ This document records the architectural and engineering decisions made for the M
 
 ---
 
-## ADR 0013: Next.js 16 Dynamic Segment Opt-Out with Cache Components
+## ADR 0013: Next.js 16 Cache Components and Elimination of Route-Level Dynamic Config
 
 * **Status:** Accepted
-* **Context:** In Next.js 16 with `cacheComponents: true` and `partialPrefetching: true`, legacy route segment config `export const dynamic = "force-dynamic"` is deprecated and rejected by the Turbopack compiler.
-* **Decision:** Protected merchant dashboards and auth boundary layouts declare `export const instant = false` and consume runtime dynamic headers (`await headers()`, `await cookies()`) within Suspense boundaries.
-* **Consequences:** Eliminates build-time static generation errors for authenticated routes, respects Next.js 16 partial prerendering boundaries, and guarantees that merchant data is never served stale from edge cache caches.
+* **Context:** In Next.js 16 with `cacheComponents: true` and `partialPrefetching: true`, legacy route segment config `export const dynamic = "force-dynamic"` is explicitly rejected by the Turbopack compiler (`Route segment config "dynamic" is not compatible with nextConfig.cacheComponents. Please remove it.`).
+* **Decision:** Completely eliminate route-level `export const dynamic` and experimental `export const instant` segment flags. Dynamic execution is achieved at the component level by consuming runtime APIs (`await headers()`, `await cookies()`, `await searchParams`) within Suspense boundaries, enabling Partial Prerendering (PPR) shells with dynamic server-streamed slots.
+* **Consequences:** Conforms to the official Next.js 16 Cache Components architecture, eliminates Turbopack build errors, enables granular component-level streaming, and ensures merchant and personalized data is never served stale.
 
 ---
 
@@ -156,3 +156,30 @@ This document records the architectural and engineering decisions made for the M
 * **Context:** Shopify-style product option sets (e.g., Size x Color) require deterministic, collision-free SKU generation and automatic inventory variant matrix calculation, while catalog browses must maintain high edge cache efficiency.
 * **Decision:** Implement a deterministic Cartesian product generator creating variant rows with unique compound abbreviations and fallback sequence counters. Catalog queries utilize Next.js 16 tag-based cache tags (`products`, `product:[slug]`, `categories`, `collections`), selectively purged via `revalidateTag` in merchant mutating Server Actions.
 * **Consequences:** Merchant product forms automatically generate variant combinations with zero missing permutations, edge and ISR caches remain fresh immediately upon merchant updates, and read load on the database remains minimal.
+
+---
+
+## ADR 0018: Inventory Reservation Strategy with Row-Level Locking and Idempotent Sweeping
+
+* **Status:** Accepted
+* **Context:** High-demand checkouts (flash sales, limited drops) risk overselling if inventory checks rely on optimistic concurrency or unreserved cart states. Deducting stock permanently upon adding to cart causes artificial stock depletion by abandoned carts, while deferring checks until payment gateway webhooks creates customer payment friction when stock runs out mid-payment.
+* **Decision:** Implement a two-phase inventory reservation pattern with 15-minute TTL. Stock is reserved inside interactive PostgreSQL transactions using `SELECT ... FOR UPDATE` row locks on the `inventory_items` table. A reservation record is written to `stock_reservations`. When payment succeeds, reservations are committed to permanent reductions. When an order is cancelled or times out, reservations are released. To guarantee eventual consistency under crash or abandonment, an idempotent Inngest cron job sweeps expired reservations every 5 minutes (`inventory-sweeper`), complemented by lazy on-demand release during catalog/inventory read operations.
+* **Consequences:** Eliminates overselling under arbitrary concurrency (verified via parallel tests), prevents abandoned carts from holding inventory indefinitely, and avoids distributed lock overhead in Redis.
+
+---
+
+## ADR 0019: Explicit Order State Machine and Immutable Financial Snapshots
+
+* **Status:** Accepted
+* **Context:** E-commerce order lifecycles involve complex state transitions (`pending`, `awaiting_payment`, `paid`, `processing`, `shipped`, `delivered`, `cancelled`, `refunded`) across customer actions, merchant fulfillment, and payment gateway webhooks. Direct manipulation of product prices or merchant edits after checkout could alter historical order totals, corrupting accounting and tax reporting.
+* **Decision:** Implement a strictly typed state machine (`ORDER_TRANSITIONS`) that validates every status change, rejecting illegal jumps (e.g., transitioning `delivered` directly to `pending` or `paid` without refund). Every state transition logs an immutable entry to `order_status_history` with actor type (`system`, `customer`, `admin`), timestamp, and reason. At checkout creation, complete variant snapshots (title, SKU, options, and unit prices in integer minor units) are serialized directly into `order_items`, insulating historical orders from subsequent catalog price or description mutations.
+* **Consequences:** Guarantees strict financial auditability, prevents invalid order lifecycle states, and protects historical order integrity against downstream catalog edits.
+
+---
+
+## ADR 0020: Shipping Provider Abstraction and Hierarchical Kemendagri Open Dataset
+
+* **Status:** Accepted
+* **Context:** The Indonesian e-commerce market requires localized address hierarchy (Province -> Regency/City -> District -> Postal Code) and integration with domestic logistics providers (JNE, SiCepat, POS Indonesia). Coupling checkout directly to external courier APIs introduces external latency and downtime vulnerabilities during storefront checkout.
+* **Decision:** Implement a `ShippingProvider` interface with a primary deterministic `FlatRateShippingProvider` (providing tiered Regular, Express, and Same-Day options with volumetric calculation) and an extensible `RajaOngkirShippingProvider` for live API integration. Address lookups utilize an in-memory hierarchical dataset sourced from the open Kemendagri administrative boundary registry (MIT licensed), enabling instant, zero-latency cascading dropdowns in the checkout UI without external network calls.
+* **Consequences:** Checkout retains sub-50ms address validation and shipping calculation latency, operates reliably even during third-party courier API outages, and complies fully with commercial licensing requirements.

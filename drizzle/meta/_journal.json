@@ -15,6 +15,13 @@
       "when": 1793305375586,
       "tag": "0001_parched_bromley",
       "breakpoints": true
+    },
+    {
+      "idx": 2,
+      "version": "7",
+      "when": 1793320152939,
+      "tag": "0002_icy_reptil",
+      "breakpoints": true
     }
   ]
 }

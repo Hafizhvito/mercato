@@ -39,6 +39,19 @@ export interface ProductDetail extends Product {
   collections: Collection[];
 }
 
+export interface ProductListItem {
+  id: string;
+  name: string;
+  slug: string;
+  status: string;
+  createdAt: Date;
+  categoryName?: string;
+  imageUrl?: string;
+  minPrice: number;
+  maxPrice: number;
+  variantCount: number;
+}
+
 export class CatalogRepository {
   async getProductById(id: string, storeId: string): Promise<ProductDetail | null> {
     const [product] = await db
@@ -333,10 +346,46 @@ export class CatalogRepository {
       .orderBy(asc(schema.categories.name));
   }
 
+  async getCategoryById(id: string, storeId: string): Promise<Category | null> {
+    const [category] = await db
+      .select()
+      .from(schema.categories)
+      .where(and(eq(schema.categories.id, id), eq(schema.categories.storeId, storeId)))
+      .limit(1);
+    return category ?? null;
+  }
+
   async createCategory(data: NewCategory): Promise<Category> {
     const [category] = await db.insert(schema.categories).values(data).returning();
     if (!category) throw new Error("Failed to create category");
     return category;
+  }
+
+  async updateCategory(
+    id: string,
+    storeId: string,
+    data: Partial<Pick<NewCategory, "name" | "slug" | "description" | "parentId">>,
+  ): Promise<Category | null> {
+    const [updated] = await db
+      .update(schema.categories)
+      .set({ ...data, updatedAt: new Date() })
+      .where(and(eq(schema.categories.id, id), eq(schema.categories.storeId, storeId)))
+      .returning();
+    return updated ?? null;
+  }
+
+  async deleteCategory(id: string, storeId: string): Promise<boolean> {
+    // Unlink any products currently categorized under this category
+    await db
+      .update(schema.products)
+      .set({ categoryId: null })
+      .where(and(eq(schema.products.categoryId, id), eq(schema.products.storeId, storeId)));
+
+    const [deleted] = await db
+      .delete(schema.categories)
+      .where(and(eq(schema.categories.id, id), eq(schema.categories.storeId, storeId)))
+      .returning();
+    return !!deleted;
   }
 
   async listCollections(storeId: string): Promise<Collection[]> {
@@ -347,10 +396,152 @@ export class CatalogRepository {
       .orderBy(asc(schema.collections.name));
   }
 
+  async getCollectionBySlug(storeId: string, slug: string): Promise<Collection | null> {
+    const [col] = await db
+      .select()
+      .from(schema.collections)
+      .where(and(eq(schema.collections.storeId, storeId), eq(schema.collections.slug, slug)))
+      .limit(1);
+    return col ?? null;
+  }
+
+  async getCollectionById(id: string, storeId: string): Promise<Collection | null> {
+    const [col] = await db
+      .select()
+      .from(schema.collections)
+      .where(and(eq(schema.collections.id, id), eq(schema.collections.storeId, storeId)))
+      .limit(1);
+    return col ?? null;
+  }
+
   async createCollection(data: NewCollection): Promise<Collection> {
     const [col] = await db.insert(schema.collections).values(data).returning();
     if (!col) throw new Error("Failed to create collection");
     return col;
+  }
+
+  async updateCollection(
+    id: string,
+    storeId: string,
+    data: Partial<Pick<NewCollection, "name" | "slug" | "description" | "imageUrl">>,
+  ): Promise<Collection | null> {
+    const [updated] = await db
+      .update(schema.collections)
+      .set({ ...data, updatedAt: new Date() })
+      .where(and(eq(schema.collections.id, id), eq(schema.collections.storeId, storeId)))
+      .returning();
+    return updated ?? null;
+  }
+
+  async deleteCollection(id: string, storeId: string): Promise<boolean> {
+    await db
+      .delete(schema.productsToCollections)
+      .where(eq(schema.productsToCollections.collectionId, id));
+
+    const [deleted] = await db
+      .delete(schema.collections)
+      .where(and(eq(schema.collections.id, id), eq(schema.collections.storeId, storeId)))
+      .returning();
+    return !!deleted;
+  }
+
+  async getCollectionProducts(
+    storeId: string,
+    collectionId: string,
+    options: {
+      page?: number;
+      limit?: number;
+      sort?: string;
+      categoryId?: string;
+    } = {},
+  ): Promise<{ products: ProductListItem[]; total: number }> {
+    const page = Math.max(1, options.page ?? 1);
+    const limit = Math.min(50, Math.max(1, options.limit ?? 12));
+    const offset = (page - 1) * limit;
+
+    const baseConditions = [
+      eq(schema.products.storeId, storeId),
+      eq(schema.products.status, "published"),
+      isNull(schema.products.deletedAt),
+      eq(schema.productsToCollections.collectionId, collectionId),
+    ];
+
+    if (options.categoryId) {
+      baseConditions.push(eq(schema.products.categoryId, options.categoryId));
+    }
+
+    const whereClause = and(...baseConditions);
+
+    let orderByClause = desc(schema.products.createdAt);
+    if (options.sort === "price-asc") {
+      orderByClause = asc(sql`min_price`);
+    } else if (options.sort === "price-desc") {
+      orderByClause = desc(sql`min_price`);
+    } else if (options.sort === "newest") {
+      orderByClause = desc(schema.products.createdAt);
+    }
+
+    const rows = await db
+      .select({
+        id: schema.products.id,
+        name: schema.products.name,
+        slug: schema.products.slug,
+        status: schema.products.status,
+        createdAt: schema.products.createdAt,
+        categoryName: schema.categories.name,
+        imageUrl: sql<string | null>`(
+          SELECT url FROM ${schema.productImages}
+          WHERE product_id = ${schema.products.id}
+          ORDER BY position ASC LIMIT 1
+        )`,
+        minPrice: sql<number>`COALESCE(MIN(${schema.productVariants.price}), 0)`,
+        maxPrice: sql<number>`COALESCE(MAX(${schema.productVariants.price}), 0)`,
+        variantCount: sql<number>`COUNT(DISTINCT ${schema.productVariants.id})`,
+      })
+      .from(schema.products)
+      .innerJoin(
+        schema.productsToCollections,
+        eq(schema.products.id, schema.productsToCollections.productId),
+      )
+      .leftJoin(schema.categories, eq(schema.products.categoryId, schema.categories.id))
+      .leftJoin(
+        schema.productVariants,
+        and(
+          eq(schema.products.id, schema.productVariants.productId),
+          isNull(schema.productVariants.deletedAt),
+        ),
+      )
+      .where(whereClause)
+      .groupBy(schema.products.id, schema.categories.name)
+      .orderBy(orderByClause)
+      .limit(limit)
+      .offset(offset);
+
+    const [countResult] = await db
+      .select({ count: sql<number>`COUNT(DISTINCT ${schema.products.id})` })
+      .from(schema.products)
+      .innerJoin(
+        schema.productsToCollections,
+        eq(schema.products.id, schema.productsToCollections.productId),
+      )
+      .where(whereClause);
+
+    const total = Number(countResult?.count ?? 0);
+
+    const products: ProductListItem[] = rows.map((r) => ({
+      id: r.id,
+      name: r.name,
+      slug: r.slug,
+      status: r.status,
+      createdAt: r.createdAt,
+      categoryName: r.categoryName ?? undefined,
+      imageUrl: r.imageUrl ?? undefined,
+      minPrice: Number(r.minPrice),
+      maxPrice: Number(r.maxPrice),
+      variantCount: Number(r.variantCount),
+    }));
+
+    return { products, total };
   }
 }
 

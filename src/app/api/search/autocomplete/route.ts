@@ -5,8 +5,6 @@ import { db } from "@/lib/db";
 import * as schema from "@/lib/db/schema";
 import { searchService } from "@/lib/search";
 
-export const instant = false;
-
 export async function GET(req: NextRequest) {
   try {
     const reqHeaders = await headers();
