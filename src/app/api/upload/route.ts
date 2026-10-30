@@ -10,8 +10,6 @@ import {
   validateFileSignature,
 } from "@/lib/storage";
 
-export const dynamic = "force-dynamic";
-
 export async function POST(req: NextRequest) {
   try {
     const reqHeaders = await headers();

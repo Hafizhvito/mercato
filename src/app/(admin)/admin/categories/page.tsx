@@ -7,7 +7,7 @@ import * as schema from "@/lib/db/schema";
 import { createCategoryAction, deleteCategoryAction } from "@/modules/catalog/actions";
 import { catalogRepository } from "@/modules/catalog/repository";
 
-export const dynamic = "force-dynamic";
+export const instant = false;
 
 export default async function AdminCategoriesPage() {
   const reqHeaders = await headers();

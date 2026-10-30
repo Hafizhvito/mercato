@@ -1,8 +1,10 @@
 "use client";
 
-import { AlertCircle, Check, ShoppingBag } from "lucide-react";
-import { useMemo, useState } from "react";
+import { AlertCircle, Check, Loader2, ShoppingBag } from "lucide-react";
+import Link from "next/link";
+import { useMemo, useState, useTransition } from "react";
 import { createMoney, formatMoney } from "@/lib/money";
+import { addToCartAction } from "@/modules/cart/actions";
 import type { ProductDetail } from "@/modules/catalog/repository";
 
 interface ProductPurchaseSectionProps {
@@ -23,6 +25,7 @@ export function ProductPurchaseSection({ product, locale }: ProductPurchaseSecti
 
   const [quantity, setQuantity] = useState(1);
   const [addedNotice, setAddedNotice] = useState(false);
+  const [isPending, startTransition] = useTransition();
 
   const currentPrice = activeVariant?.price ?? 0;
   const compareAtPrice = activeVariant?.compareAtPrice;
@@ -30,9 +33,17 @@ export function ProductPurchaseSection({ product, locale }: ProductPurchaseSecti
   const isOutOfStock = currentStock <= 0;
 
   const handleAddToCart = () => {
-    if (isOutOfStock) return;
-    setAddedNotice(true);
-    setTimeout(() => setAddedNotice(false), 3000);
+    if (isOutOfStock || !activeVariant) return;
+    startTransition(async () => {
+      await addToCartAction({
+        productId: product.id,
+        variantId: activeVariant.id,
+        quantity,
+        unitPrice: activeVariant.price,
+      });
+      setAddedNotice(true);
+      setTimeout(() => setAddedNotice(false), 4000);
+    });
   };
 
   return (
@@ -135,27 +146,43 @@ export function ProductPurchaseSection({ product, locale }: ProductPurchaseSecti
 
           <button
             type="button"
-            disabled={isOutOfStock}
+            disabled={isOutOfStock || isPending}
             onClick={handleAddToCart}
             className="flex-1 inline-flex items-center justify-center gap-2 rounded-lg bg-zinc-900 py-3.5 px-6 text-sm font-semibold text-white shadow-xs transition hover:bg-zinc-800 disabled:opacity-40 disabled:cursor-not-allowed"
           >
-            <ShoppingBag className="h-4 w-4" />
+            {isPending ? (
+              <Loader2 className="h-4 w-4 animate-spin" />
+            ) : (
+              <ShoppingBag className="h-4 w-4" />
+            )}
             {isOutOfStock
               ? locale === "id"
                 ? "Stok Habis"
                 : "Out of Stock"
-              : locale === "id"
-                ? "Tambah ke Keranjang"
-                : "Add to Cart"}
+              : isPending
+                ? "Adding..."
+                : locale === "id"
+                  ? "Tambah ke Keranjang"
+                  : "Add to Cart"}
           </button>
         </div>
 
         {addedNotice && (
-          <div className="rounded-lg bg-emerald-50 border border-emerald-200 p-3 text-xs text-emerald-800 flex items-center gap-2">
-            <Check className="h-4 w-4 text-emerald-600" />
-            {locale === "id"
-              ? `Berhasil menambahkan ${quantity} item ke keranjang belanja!`
-              : `Added ${quantity} item(s) to shopping cart!`}
+          <div className="rounded-lg bg-emerald-50 border border-emerald-200 p-3 text-xs text-emerald-800 flex items-center justify-between gap-2">
+            <div className="flex items-center gap-2">
+              <Check className="h-4 w-4 text-emerald-600 shrink-0" />
+              <span>
+                {locale === "id"
+                  ? `Berhasil menambahkan ${quantity} item ke keranjang!`
+                  : `Added ${quantity} item(s) to shopping cart!`}
+              </span>
+            </div>
+            <Link
+              href={`/${locale}/cart`}
+              className="font-bold underline hover:text-emerald-950 shrink-0"
+            >
+              {locale === "id" ? "Lihat Keranjang →" : "View Cart →"}
+            </Link>
           </div>
         )}
       </div>

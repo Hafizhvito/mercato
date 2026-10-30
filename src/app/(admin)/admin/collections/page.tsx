@@ -8,7 +8,7 @@ import * as schema from "@/lib/db/schema";
 import { createCollectionAction, deleteCollectionAction } from "@/modules/catalog/actions";
 import { catalogRepository } from "@/modules/catalog/repository";
 
-export const dynamic = "force-dynamic";
+export const instant = false;
 
 export default async function AdminCollectionsPage() {
   const reqHeaders = await headers();

@@ -17,16 +17,22 @@ This document outlines planned enhancements and deferred features across upcomin
 - [x] Storage abstraction interface with S3/R2 direct uploads, local filesystem fallback, and magic-byte MIME validation
 - [x] Hybrid PostgreSQL search engine combining to_tsvector full-text search with pg_trgm trigram similarity
 - [x] Admin product management (listing, faceted filter, search, creation, editing, image uploads, SEO configuration)
+- [x] Admin bulk actions (publish, draft, archive, bulk delete)
+- [x] Admin category and collection management with full CRUD
 - [x] Storefront customer catalog browser, search autocomplete with Upstash rate limiting, and Partial Prerendered PDP
+- [x] Storefront collection pages with faceted filtering, sorting, and pagination
 - [x] Realistic 24-product catalog seed across 6 Indonesian commerce categories
-- [ ] Admin bulk actions (status toggle, inventory sync, CSV export/import) [Deferred to Phase 5 operations]
+- [x] SEO sitemap.xml, robots.txt, and 404 not-found handlers
 
-## Phase 3: Cart, Inventory, and Checkout [UPCOMING]
-- Server-persisted guest carts merged upon user authentication
-- 15-minute stock reservation with row-level locks (SELECT FOR UPDATE)
-- Indonesian administrative hierarchy address selector (Province, City, District)
-- Real-time shipping rate calculation (Flat rate and RajaOngkir courier integration)
-- Flexible coupon and discount engine with usage caps and minimum spend rules
+## Phase 3: Cart, Inventory, and Checkout [COMPLETED]
+- [x] Server-persisted guest carts with token cookies, merged upon user authentication, with real-time price revalidation and unpublished item pruning
+- [x] 15-minute stock reservation with interactive PostgreSQL transactions and row-level locks (`SELECT ... FOR UPDATE`)
+- [x] Idempotent background reservation sweeper via Inngest cron and lazy on-demand release during catalog/inventory queries
+- [x] Indonesian administrative hierarchy address selector (Province, Regency/City, District, Postal Code) with open Kemendagri dataset (MIT)
+- [x] Shipping rate calculation provider abstraction (`FlatRateShippingProvider` and extensible `RajaOngkirShippingProvider`)
+- [x] Flexible discount engine with percentage, fixed amount, free shipping, minimum spend, expiry, and atomic usage caps
+- [x] Explicit order state machine (`ORDER_TRANSITIONS`) with immutable audit log (`order_status_history`) and variant financial snapshotting
+- [x] High-concurrency integration test suite verifying single-unit stock integrity under N parallel checkouts with zero overselling and tenant boundary isolation
 
 ## Phase 4: Payment Integrations
 - Midtrans Snap and Core API adapter (QRIS, Virtual Accounts, e-wallets)

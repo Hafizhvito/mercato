@@ -1,3 +1,4 @@
+import { ShoppingBag } from "lucide-react";
 import Link from "next/link";
 import { SearchBar } from "./SearchBar";
 
@@ -37,6 +38,13 @@ export function StorefrontHeader({ locale = "id" }: StorefrontHeaderProps) {
 
         {/* Action Controls & Locale Switcher */}
         <div className="flex items-center gap-4 text-sm">
+          <Link
+            href={`/${locale}/cart`}
+            className="flex items-center gap-1.5 rounded-lg border border-zinc-200 bg-white px-3 py-1.5 text-xs font-semibold text-zinc-900 hover:bg-zinc-50"
+          >
+            <ShoppingBag className="h-3.5 w-3.5" />
+            <span>{locale === "id" ? "Keranjang" : "Cart"}</span>
+          </Link>
           <Link
             href={locale === "id" ? "/en" : "/id"}
             className="rounded-md border border-zinc-200 px-2.5 py-1 text-xs font-semibold uppercase tracking-wider text-zinc-700 hover:bg-zinc-50"

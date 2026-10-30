@@ -3,7 +3,7 @@ import Link from "next/link";
 import { redirect } from "next/navigation";
 import { auth } from "@/lib/auth";
 
-export const dynamic = "force-dynamic";
+export const instant = false;
 
 export default async function AdminLayout({ children }: { children: React.ReactNode }) {
   const reqHeaders = await headers();

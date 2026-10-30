@@ -11,6 +11,8 @@ import { db } from "@/lib/db";
 import * as schema from "@/lib/db/schema";
 import { catalogRepository } from "@/modules/catalog/repository";
 
+export const instant = false;
+
 interface ProductPageProps {
   params: Promise<{
     locale: string;
