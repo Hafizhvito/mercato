@@ -190,17 +190,16 @@ describe("Phase 4 Payments, Webhooks, Integrity, & Refunds Suite", () => {
     expect(tamperedResult.error).toContain("Cryptographic signature mismatch");
   });
 
-  it("3. Stripe IDR Minor Unit Handling: converts IDR * 100 for Stripe and / 100 for Mercato", () => {
-    // 1 IDR = 1 unit in Mercato (e.g. Rp 150.000 = 150000)
-    // Stripe treats IDR as a two-decimal currency: Rp 150.000 = 15000000
-    const mercatoIdr = 150000;
-    const stripeAmount = stripePaymentProvider.toStripeAmount(mercatoIdr, "IDR");
-    expect(stripeAmount).toBe(15000000);
+  it("3. Stripe IDR Refusal: explicitly refuses IDR and passes through standard currencies", () => {
+    // Stripe IDR processing is explicitly refused in code pending verification
+    expect(() => stripePaymentProvider.toStripeAmount(150000, "IDR")).toThrow(
+      /Stripe IDR amount conversion is disabled pending verification/,
+    );
+    expect(() => stripePaymentProvider.fromStripeAmount(15000000, "IDR")).toThrow(
+      /Stripe IDR amount conversion is disabled pending verification/,
+    );
 
-    const convertedBack = stripePaymentProvider.fromStripeAmount(stripeAmount, "IDR");
-    expect(convertedBack).toBe(150000);
-
-    // USD is already standard 2 decimal places (2500 cents = $25.00)
+    // USD is standard 2 decimal places (2500 cents = $25.00)
     const usdAmount = 2500;
     expect(stripePaymentProvider.toStripeAmount(usdAmount, "USD")).toBe(2500);
     expect(stripePaymentProvider.fromStripeAmount(2500, "USD")).toBe(2500);

@@ -51,32 +51,15 @@ export class StripePaymentProvider implements PaymentProvider {
   /**
    * Converts Mercato integer currency units to Stripe API amounts.
    *
-   * Official Stripe Documentation Reference:
-   * URL: https://docs.stripe.com/currencies
-   * Section: "Zero-decimal currencies" & "Minimum and maximum charge amounts"
-   *
-   * Official Statement:
-   * "All API requests expect amounts to be provided in a currency’s smallest unit.
-   * For example, to charge 10 USD, provide an amount value of 1000 (that is, 1000 cents)."
-   *
-   * Under Zero-decimal currencies:
-   * Stripe explicitly lists zero-decimal currencies:
-   * BIF, CLP, DJF, GNF, JPY, KMF, KRW, MGA, PYG, RWF, UGX, VND, VUV, XAF, XOF, XPF.
-   * IDR (Indonesian Rupiah) is NOT listed among zero-decimal currencies.
-   *
-   * Under Minimum and maximum charge amounts:
-   * "For non-card payment methods, the amount value supports up to 12 digits for IDR
-   * (for example, a value of 999999999999 for 9,999,999,999.99 IDR)."
-   * "Minimum charge amount is equivalent to 0.50 IDR" (i.e. integer value 50 in API).
-   *
-   * Because Mercato represents IDR as whole Rupiah (e.g. 150000 = Rp 150.000)
-   * while Stripe expects two decimal places for IDR, we multiply by 100 when
-   * communicating with Stripe, and divide by 100 when receiving amounts from Stripe.
+   * NOTE: Stripe IDR processing is explicitly refused in code pending verification.
+   * Standard two-decimal currencies (USD, EUR, SGD, etc.) are passed through in minor units.
    */
   toStripeAmount(amountMinor: number, currency: string): number {
     const cur = currency.toUpperCase();
     if (cur === "IDR") {
-      return amountMinor * 100;
+      throw new Error(
+        "Stripe IDR amount conversion is disabled pending verification. Please use Midtrans.",
+      );
     }
     return amountMinor;
   }
@@ -87,7 +70,9 @@ export class StripePaymentProvider implements PaymentProvider {
   fromStripeAmount(stripeAmount: number, currency: string): number {
     const cur = currency.toUpperCase();
     if (cur === "IDR") {
-      return Math.round(stripeAmount / 100);
+      throw new Error(
+        "Stripe IDR amount conversion is disabled pending verification. Please use Midtrans.",
+      );
     }
     return stripeAmount;
   }
@@ -95,6 +80,12 @@ export class StripePaymentProvider implements PaymentProvider {
   async createPaymentSession(order: Order, items: OrderItem[]): Promise<PaymentSessionResult> {
     if (!this.isAvailable()) {
       throw new Error("Stripe payment provider is not configured. Secret key is missing.");
+    }
+
+    if (order.currency.toUpperCase() === "IDR") {
+      throw new Error(
+        "Stripe payment provider is restricted from processing IDR orders until currency minor unit handling is verified. Please choose Midtrans for Indonesian Rupiah transactions.",
+      );
     }
 
     const appUrl = env.NEXT_PUBLIC_APP_URL || "http://localhost:3000";

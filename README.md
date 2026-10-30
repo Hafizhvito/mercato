@@ -75,7 +75,7 @@ Fill in your configuration values:
 4. **BETTER_AUTH_SECRET:** A random 32-character string for signing session tokens.
 5. **BETTER_AUTH_URL & NEXT_PUBLIC_APP_URL:** Defaults to `http://localhost:3000` for local development.
 6. **SEED_ADMIN_EMAIL & SEED_ADMIN_PASSWORD:** Required credentials for provisioning the initial store owner account. Minimum 12 characters with mixed uppercase, lowercase, numbers, and symbols.
-7. **MIDTRANS_SERVER_KEY & NEXT_PUBLIC_MIDTRANS_CLIENT_KEY:** Midtrans Sandbox API keys.
+7. **MIDTRANS_SERVER_KEY & NEXT_PUBLIC_MIDTRANS_CLIENT_KEY:** Midtrans API keys.
 8. **STRIPE_SECRET_KEY & STRIPE_WEBHOOK_SECRET:** Stripe test API keys.
 9. **RESEND_API_KEY:** Resend API key for transactional emails. If unset or containing test keys, Mercato automatically falls back to `ConsoleEmailService` (printing email bodies and links to stdout).
 
@@ -129,29 +129,29 @@ Open [http://localhost:3000](http://localhost:3000) in your browser. The applica
 
 ### 1. Midtrans Sandbox Setup (Indonesian Gateway)
 
-Mercato integrates **Midtrans Snap** for domestic Indonesian payment methods (QRIS, GoPay, ShopeePay, BCA/Mandiri/BNI/BRI Virtual Accounts).
+Mercato integrates **Midtrans Snap** for domestic Indonesian payment methods (QRIS, GoPay, ShopeePay, BCA/Mandiri/BNI/BRI Virtual Accounts). Reference: [Midtrans Documentation](https://docs.midtrans.com/).
 
 #### Obtaining Keys:
 1. Register or log in at the [Midtrans Portal](https://dashboard.midtrans.com/).
-2. In the top navigation bar, ensure the environment toggle is set to **Sandbox** (not Production).
+2. In the top navigation bar, select the active environment toggle: **Sandbox** (for development) or **Production** (for live).
 3. Navigate to **Settings** -> **Access Keys**.
 4. Copy the **Server Key** and **Client Key** into `.env.local`:
    ```bash
-   MIDTRANS_SERVER_KEY=SB-Mid-server-XXXXXX
-   NEXT_PUBLIC_MIDTRANS_CLIENT_KEY=SB-Mid-client-XXXXXX
+   MIDTRANS_SERVER_KEY=<your-midtrans-server-key>
+   NEXT_PUBLIC_MIDTRANS_CLIENT_KEY=<your-midtrans-client-key>
    ```
 
-#### Key Differences & Mismatch Pitfall:
-- **Sandbox Keys:** Usually prefixed with `SB-Mid-server-...` and `SB-Mid-client-...` (though some older client keys may omit `SB-`).
-- **Production Keys:** Prefixed with `Mid-server-...` and `Mid-client-...`.
-- **Environment Mismatch Warning:** If you mix a Sandbox Server Key with a Production Client Key (or vice versa), or generate keys in Production mode while requesting the Sandbox API endpoint, Midtrans will reject payment token creation with:
+#### Key Format & Environment Matching:
+- **Server Keys:** In Sandbox, server keys typically start with `SB-Mid-server-`. In Production, server keys start with `Mid-server-`.
+- **Client Keys:** Sandbox client keys may start with either `SB-Mid-client-` or `Mid-client-` depending on MAP account provisioning date. You cannot rely solely on the prefix to detect sandbox mode for client keys.
+- **Environment Matching Requirement:** Both the Server Key and Client Key must be retrieved from the exact same environment toggle in the Midtrans Administration Portal (MAP), and paired with the corresponding endpoint (`https://api.sandbox.midtrans.com` vs `https://api.midtrans.com`). Mismatched keys or endpoints cause transaction token creation to be rejected with:
   ```
-  HTTP 401 Unauthorized / Access Denied: Midtrans server rejected request
+  HTTP 401 Unauthorized: Access denied due to unauthorized transaction, please check client key or server key
   ```
-  Both keys must originate from the exact same Midtrans dashboard environment.
+  Reference: [Midtrans Error Handling & Troubleshooting](https://docs.midtrans.com/reference/errors-and-troubleshooting).
 
 #### Required API Permissions:
-Ensure your Midtrans Server Key has the following features enabled under **Settings** -> **Payment Channels** and **Snap Preferences**:
+Ensure your Midtrans Server Key has permissions enabled under **Settings** -> **Payment Channels** and **Snap Preferences**:
 - Snap Checkout (Popup / Redirect)
 - Core API access
 - Permission to **Cancel**, **Expire**, and **Refund** transactions (required for automated expiration and admin order refunds).
@@ -160,22 +160,20 @@ Ensure your Midtrans Server Key has the following features enabled under **Setti
 
 ### 2. Resend Setup (Transactional Emails)
 
-Mercato uses **Resend** and `@react-email/components` for sending order confirmations, shipping updates, payment receipts, password resets, and verification emails.
+Mercato uses **Resend** and `@react-email/components` for transactional emails. Reference: [Resend Documentation](https://resend.com/docs).
 
 #### Obtaining Keys:
-1. Create a free account at [Resend](https://resend.com/).
-2. Navigate to **API Keys** -> **Create API Key** (with *Full Access* or *Sending access*).
+1. Create an account at [Resend](https://resend.com/).
+2. Navigate to **API Keys** -> **Create API Key** (with *Sending access* or *Full Access*).
 3. Set the key in `.env.local`:
    ```bash
-   RESEND_API_KEY=re_123456789...
+   RESEND_API_KEY=<your-resend-api-key>
    EMAIL_FROM="Mercato <onboarding@resend.dev>"
    ```
 
-#### Free Tier Restrictions & Fallback Behavior:
-- **Sandbox / Free Tier Limit:** On Resend's free tier without a verified custom domain, emails can **only** be delivered to the single email address registered as the Resend account owner, and must be sent from `onboarding@resend.dev`. Attempting to send to any other recipient results in:
-  ```
-  HTTP 403 Forbidden: You can only send testing emails to your own email address
-  ```
+#### Free Tier Limits & Recipient Restrictions:
+- **Free Tier Quota:** 3,000 emails per month, with a cap of 100 emails per day (calculated on a UTC calendar day). Reference: [Resend Sending Limits](https://resend.com/docs/dashboard/emails/send-limits).
+- **Default Sender Restriction:** When sending from `onboarding@resend.dev` without a verified custom domain, emails can **only** be delivered to the registered Resend account owner's email address (or testing addresses like `delivered@resend.dev`). Attempting to send to any other address triggers an API validation error. Reference: [Resend Domains Documentation](https://resend.com/docs/dashboard/domains/introduction).
 - **Console Email Fallback:** For local development and testing with arbitrary email addresses, Mercato provides `ConsoleEmailService`. If `RESEND_API_KEY` is omitted, set to a dummy value, or in test environments, Mercato automatically routes emails to the local console output (printing the subject, recipient, token, and clickable verification/reset links), preventing blocked development workflows.
 
 ---
@@ -184,31 +182,34 @@ Mercato uses **Resend** and `@react-email/components` for sending order confirma
 
 #### Testing Midtrans Webhooks Locally:
 1. Start your local Mercato server: `pnpm dev` (runs on `http://localhost:3000`).
-2. Start a local HTTPS tunnel using `cloudflared` or `untun` (no account required):
+2. Start a local HTTPS tunnel using `cloudflared` (Reference: [Cloudflare TryCloudflare Documentation](https://developers.cloudflare.com/cloudflare-one/connections/connect-networks/do-more-with-tunnels/trycloudflare/)):
+   ```bash
+   cloudflared tunnel --url http://localhost:3000
+   ```
+   Or using `untun` (Reference: [unjs/untun](https://github.com/unjs/untun)):
    ```bash
    npx untun tunnel http://localhost:3000
-   # Or using cloudflared:
-   # cloudflared tunnel --url http://localhost:3000
    ```
-3. Copy the public HTTPS URL (e.g. `https://xxxx.untun.dev`).
+3. Copy the public HTTPS URL (e.g. `https://xxxx.trycloudflare.com`).
 4. In the **Midtrans Sandbox Dashboard**, navigate to **Settings** -> **Configuration** -> **Payment Notification URL**.
 5. Set the URL to:
-   `https://xxxx.untun.dev/api/webhooks/midtrans`
+   `https://xxxx.trycloudflare.com/api/webhooks/midtrans`
 6. Complete a test payment using the Midtrans Payment Simulator (QRIS scan or Virtual Account simulation). The webhook will hit `/api/webhooks/midtrans`, verify SHA-512 signatures, transition the order state, and record an audit log.
 
 #### Testing Stripe Webhooks Locally:
-1. Run the Stripe CLI via `npx`:
+1. Run the Stripe CLI via `npx` (Reference: [Stripe CLI Documentation](https://docs.stripe.com/stripe-cli)):
    ```bash
    npx stripe listen --forward-to localhost:3000/api/webhooks/stripe
    ```
 2. The Stripe CLI will output a webhook signing secret: `whsec_...`
-3. Copy that secret into `STRIPE_WEBHOOK_SECRET` in `.env.local`.
+3. Copy that secret into `STRIPE_WEBHOOK_SECRET=<your-stripe-webhook-secret>` in `.env.local`.
 4. Trigger test events via:
    ```bash
    npx stripe trigger checkout.session.completed
    ```
 
 #### Running Inngest Background Sweepers Locally:
+Reference: [Inngest Local Development Documentation](https://www.inngest.com/docs/local-development).
 ```bash
 npx inngest-cli@latest dev -u http://localhost:3000/api/inngest
 ```
@@ -216,9 +217,14 @@ Open [http://localhost:8288](http://localhost:8288) to inspect and trigger the `
 
 ---
 
-## Payments, Late Payments, and Status Synchronization
+## Payments, Late Payments, and Currency Status
 
-- **Provider Enablement Guard:** Providers only appear in the checkout interface if their API keys are real (rejecting default placeholders like `SB-Mid-server-sample_server_key` or `sk_test_sample_stripe_secret_key`). If no gateway is configured, a helpful notice informs customers to contact store administration.
+- **Provider Enablement Guard:** Providers only appear in the checkout interface if their API keys are configured (rejecting default sample placeholders). If no gateway is configured, a helpful notice informs customers to contact store administration.
+- **Stripe IDR Policy:** Official Stripe documentation ([Stripe Currencies](https://docs.stripe.com/currencies)) states:
+  - Minimum charge: `0.50 IDR`
+  - Maximum charge for non-card methods: `12 digits for IDR, for a maximum charge of 9,999,999,999.99 IDR ( 999999999999 )`
+  - Under Zero-decimal currencies, IDR is not listed.
+  - **Implementation Status:** Stripe IDR processing is explicitly restricted in code pending verified merchant account support in Indonesia. IDR checkouts are handled through Midtrans.
 - **Late Payment Handling (Manual Review Default):** In domestic e-commerce, customers often complete bank Virtual Account transfers after the 15-minute reservation window has expired. If stock is still available, the order is automatically revived to `paid`. If stock has been exhausted by another customer, Mercato flags the order with `paymentStatus = "needs_review"`, records an audit log, and neutrally notifies the customer. Automatic provider refunds are **not** triggered unless explicitly enabled via `AUTO_REFUND_ON_STOCK_EXHAUSTED=true` (off by default).
 - **Payment Status Synchronization:** Customers and merchants can click **"Check payment status"** on the order page (`/orders/[orderNumber]`). It calls `getPaymentStatus` and applies the result through the exact same transition and idempotency path as webhooks, protected by rate limiting and guest token authorization.
 
@@ -228,9 +234,14 @@ Open [http://localhost:8288](http://localhost:8288) to inspect and trigger the `
 
 Mercato embeds the complete administrative hierarchy of Indonesia:
 - **38 Provinces**, **514 Regencies/Cities**, and **7,265 Districts**.
-- **Dataset License:** Compilation and SQL scripts by `cahyadsn/wilayah` are MIT Licensed.
-- **Statutory Origin:** Administrative boundaries, names, and hierarchical codes are statutory government data promulgated by the Ministry of Home Affairs (Kemendagri decrees: Kepmendagri No. 050-145 Tahun 2022, Kepmendagri 100.1.1-6117 Tahun 2022, Permendagri No. 72/2019, Kepmendagri 300.2.2-2138 Tahun 2025). Under **UU No. 28 Tahun 2014 tentang Hak Cipta Pasal 42 huruf b**, official laws, government decrees, and public administrative designations reside permanently in the public domain.
-- **RajaOngkir Courier Mapping:** RajaOngkir's Starter API uses internal sequential integer `city_id` values (1 to 501) rather than Kemendagri codes. If `RAJAONGKIR_API_KEY` is not provided, Mercato seamlessly uses the built-in tiered `FlatRateShippingProvider` with zero errors or disruption to checkout.
+- **Dataset License:** Sourced via [`cahyadsn/wilayah`](https://github.com/cahyadsn/wilayah) under the **MIT License** (Copyright (c) 2017-2025 Cahya DSN).
+- **Administrative Baseline:** Compiled in conformance with **Kepmendagri No. 300.2.2-2430 Tahun 2025** (and predecessor decrees 050-145/2022, 100.1.1-6117/2022, and Permendagri 72/2019).
+- **RajaOngkir Courier Mapping:**
+  - References: [Komerce RajaOngkir API](https://komerceapi.readme.io/reference/rajaongkir-api) and [RajaOngkir Documentation](https://rajaongkir.com/dokumentasi).
+  - RajaOngkir uses proprietary sequential integer `city_id` numbers (1 to 501), not Kemendagri codes. The Starter tier exists historically for legacy accounts, while Komerce now provides the modern delivery API. When `RAJAONGKIR_API_KEY` is not provided, Mercato automatically falls back to `FlatRateShippingProvider` without throwing errors or breaking checkout.
+
+> [!NOTE]
+> **Statutory Notice (Not Legal Advice):** Under Indonesian Copyright Law (Undang-Undang Republik Indonesia Nomor 28 Tahun 2014 tentang Hak Cipta, Pasal 42 huruf b), official legislative enactments, government regulations, and public administrative boundaries reside in the public domain and are excluded from copyright protection. This notice is provided for informational and architectural context only and does not constitute formal legal advice.
 
 ---
 
