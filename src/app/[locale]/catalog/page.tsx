@@ -11,8 +11,6 @@ import { createMoney, formatMoney } from "@/lib/money";
 import { searchService } from "@/lib/search";
 import { catalogRepository } from "@/modules/catalog/repository";
 
-export const instant = false;
-
 interface CatalogPageProps {
   params: Promise<{ locale: string }>;
   searchParams: Promise<{

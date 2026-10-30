@@ -9,8 +9,6 @@ import { createMoney, formatMoney } from "@/lib/money";
 import { type SearchProductResult, searchService } from "@/lib/search";
 import { type Collection, catalogRepository } from "@/modules/catalog/repository";
 
-export const instant = false;
-
 export default async function HomePage({ params }: { params: Promise<{ locale: string }> }) {
   const { locale } = await params;
   setRequestLocale(locale);

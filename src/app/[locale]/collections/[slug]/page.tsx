@@ -8,8 +8,6 @@ import * as schema from "@/lib/db/schema";
 import { createMoney, formatMoney } from "@/lib/money";
 import { catalogRepository } from "@/modules/catalog/repository";
 
-export const instant = false;
-
 interface CollectionPageProps {
   params: Promise<{
     locale: string;

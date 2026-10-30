@@ -8,8 +8,6 @@ export const metadata: Metadata = {
   description: "View and manage items in your Mercato shopping cart.",
 };
 
-export const instant = false;
-
 export default async function CartPage({ params }: { params: Promise<{ locale: string }> }) {
   const { locale } = await params;
   const cart = await getCartAction();

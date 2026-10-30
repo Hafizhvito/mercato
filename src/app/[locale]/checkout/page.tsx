@@ -10,8 +10,6 @@ export const metadata: Metadata = {
   description: "Complete your order securely on Mercato.",
 };
 
-export const instant = false;
-
 export default async function CheckoutPage({ params }: { params: Promise<{ locale: string }> }) {
   const { locale } = await params;
   const cart = await getCartAction();

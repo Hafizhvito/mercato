@@ -8,8 +8,6 @@ import * as schema from "@/lib/db/schema";
 import { catalogRepository } from "@/modules/catalog/repository";
 import { ProductTableWithBulkActions } from "./ProductTableWithBulkActions";
 
-export const instant = false;
-
 interface ProductsPageProps {
   searchParams: Promise<{
     page?: string;

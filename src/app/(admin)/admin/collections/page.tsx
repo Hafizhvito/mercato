@@ -8,8 +8,6 @@ import * as schema from "@/lib/db/schema";
 import { createCollectionAction, deleteCollectionAction } from "@/modules/catalog/actions";
 import { catalogRepository } from "@/modules/catalog/repository";
 
-export const instant = false;
-
 export default async function AdminCollectionsPage() {
   const reqHeaders = await headers();
   const session = await auth.api.getSession({ headers: reqHeaders });

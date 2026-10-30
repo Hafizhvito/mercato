@@ -7,8 +7,6 @@ import * as schema from "@/lib/db/schema";
 import { createCategoryAction, deleteCategoryAction } from "@/modules/catalog/actions";
 import { catalogRepository } from "@/modules/catalog/repository";
 
-export const instant = false;
-
 export default async function AdminCategoriesPage() {
   const reqHeaders = await headers();
   const session = await auth.api.getSession({ headers: reqHeaders });
