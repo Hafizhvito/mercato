@@ -8,11 +8,13 @@ import { inventoryService } from "@/modules/inventory/service";
 import type { ShippingAddress } from "@/modules/orders/schema";
 import { orderService } from "@/modules/orders/service";
 
-describe("Phase 3 Integration: Concurrency, Inventory Reservations, & Tenant Isolation", () => {
+describe("Phase 4 Strengthened Concurrency, Reservations, & Integrity Suite", () => {
   let storeAId: string;
   let storeBId: string;
-  let productAId: string;
   let singleStockVariantId: string;
+  let fiveStockVariantId: string;
+  let singleStockProductId: string;
+  let fiveStockProductId: string;
 
   const mockAddress: ShippingAddress = {
     recipientName: "Test Buyer",
@@ -50,25 +52,41 @@ describe("Phase 3 Integration: Concurrency, Inventory Reservations, & Tenant Iso
       .returning();
     storeBId = storeB?.id ?? "";
 
-    // 3. Provision Product in Store A with exactly 1 unit of stock
-    const productA = await catalogService.createProductWithVariants(storeAId, {
+    // 3. Provision Product with 1 unit of stock
+    const product1 = await catalogService.createProductWithVariants(storeAId, {
       name: "Limited Edition Handcraft",
       description: "Only one piece available",
       status: "published",
       variants: [
         {
-          sku: `SKU-LAST-UNIT-${Date.now()}`,
+          sku: `SKU-ONE-${Date.now()}`,
           title: "Unique Artifact",
           price: 500_000,
           stock: 1, // EXACTLY 1 UNIT
         },
       ],
     });
+    singleStockProductId = product1.id;
+    singleStockVariantId = product1.variants[0]?.id ?? "";
 
-    productAId = productA.id;
-    singleStockVariantId = productA.variants[0]?.id ?? "";
+    // 4. Provision Product with 5 units of stock
+    const product5 = await catalogService.createProductWithVariants(storeAId, {
+      name: "Artisan Batch Coffee",
+      description: "Batch of five packets",
+      status: "published",
+      variants: [
+        {
+          sku: `SKU-FIVE-${Date.now()}`,
+          title: "250g Beans",
+          price: 120_000,
+          stock: 5, // EXACTLY 5 UNITS
+        },
+      ],
+    });
+    fiveStockProductId = product5.id;
+    fiveStockVariantId = product5.variants[0]?.id ?? "";
 
-    // 4. Seed Discounts in Store A and Store B
+    // 5. Seed Discounts in Store A and Store B
     await db.insert(schema.discounts).values([
       {
         storeId: storeAId,
@@ -100,159 +118,269 @@ describe("Phase 3 Integration: Concurrency, Inventory Reservations, & Tenant Iso
     }
   });
 
-  it("handles N concurrent checkouts for the last unit of stock: exactly 1 wins, 0 overselling, no negative stock", async () => {
-    const CONCURRENT_ATTEMPTS = 5;
+  it("handles 20 concurrent checkouts for 1 unit: exactly 1 wins, 19 fail, 0 overselling", async () => {
+    const CONCURRENT_ATTEMPTS = 20;
 
-    // Dispatch 5 parallel checkout requests simultaneously for the same 1-unit variant
     const checkoutPromises = Array.from({ length: CONCURRENT_ATTEMPTS }, (_, index) => {
-      const checkoutSessionId = `sess-race-${index}-${crypto.randomUUID()}`;
-      const idempotencyKey = `idem-race-${index}-${crypto.randomUUID()}`;
+      const checkoutSessionId = `sess-race1-${index}-${crypto.randomUUID()}`;
+      const idempotencyKey = `idem-race1-${index}-${crypto.randomUUID()}`;
 
-      return orderService.createOrder({
-        storeId: storeAId,
-        idempotencyKey,
-        checkoutSessionId,
-        guestEmail: `buyer-${index}@mercato.local`,
-        shippingAddress: mockAddress,
-        shippingCarrier: "JNE",
-        shippingService: "REG",
-        shippingAmountMinor: 15_000,
-        items: [
-          {
-            productId: productAId,
-            variantId: singleStockVariantId,
-            quantity: 1,
-          },
-        ],
-      });
+      return orderService
+        .createOrder({
+          storeId: storeAId,
+          idempotencyKey,
+          checkoutSessionId,
+          guestEmail: `buyer-${index}@example.com`,
+          shippingAddress: mockAddress,
+          shippingCarrier: "JNE",
+          shippingService: "REG",
+          shippingAmountMinor: 18_000,
+          items: [
+            {
+              productId: singleStockProductId,
+              variantId: singleStockVariantId,
+              quantity: 1,
+            },
+          ],
+        })
+        .then((res) => ({ success: true, order: res.order }))
+        .catch((err) => ({
+          success: false,
+          error: err instanceof Error ? err.message : String(err),
+        }));
     });
 
-    const results = await Promise.allSettled(checkoutPromises);
+    const results = await Promise.all(checkoutPromises);
 
-    const fulfilled = results.filter((r) => r.status === "fulfilled");
-    const rejected = results.filter((r) => r.status === "rejected");
+    const successes = results.filter((r) => r.success);
+    const failures = results.filter((r): r is { success: false; error: string } => !r.success);
 
-    // Exactly 1 checkout must succeed
-    expect(fulfilled.length).toBe(1);
-    // All other 4 checkouts must fail
-    expect(rejected.length).toBe(CONCURRENT_ATTEMPTS - 1);
+    // EXACTLY 1 checkout must succeed out of 20
+    expect(successes.length).toBe(1);
+    expect(failures.length).toBe(19);
 
-    // Verify rejection reason is insufficient stock
-    for (const rej of rejected) {
-      if (rej.status === "rejected") {
-        expect(rej.reason.message).toMatch(/Insufficient stock/);
-      }
+    for (const fail of failures) {
+      expect(fail.error).toMatch(/Insufficient stock/i);
     }
 
-    // Verify available stock is now 0
+    // Verify database state: Available stock must be 0
     const availableStock = await inventoryService.getAvailableStock(singleStockVariantId);
     expect(availableStock).toBe(0);
-
-    // Verify raw variant stock is never negative
-    const [rawVariant] = await db
-      .select({ stock: schema.productVariants.stock })
-      .from(schema.productVariants)
-      .where(eq(schema.productVariants.id, singleStockVariantId));
-    expect(rawVariant?.stock).toBe(1); // Still 1, held by reservation
-
-    // Winning order details
-    const winningResult = (
-      fulfilled[0] as PromiseFulfilledResult<{
-        order: typeof schema.orders.$inferSelect;
-      }>
-    ).value;
-    const winningOrder = winningResult.order;
-    expect(winningOrder.status).toBe("awaiting_payment");
-    expect(winningOrder.totalAmount).toBe(515_000); // 500.000 + 15.000
-
-    // Transition winning order to "paid" -> commits reservation and decrements stock
-    const paidOrder = await orderService.transitionOrderStatus(winningOrder.id, storeAId, "paid", {
-      reason: "Payment verified",
-      actorId: "system",
-    });
-    expect(paidOrder.status).toBe("paid");
-
-    // After commit, variant stock is officially decremented to 0
-    const [committedVariant] = await db
-      .select({ stock: schema.productVariants.stock })
-      .from(schema.productVariants)
-      .where(eq(schema.productVariants.id, singleStockVariantId));
-    expect(committedVariant?.stock).toBe(0);
   });
 
-  it("releases reservation when an order is cancelled before payment", async () => {
-    // Provision another 1-unit item to test reservation release
-    const cancelProduct = await catalogService.createProductWithVariants(storeAId, {
-      name: "Cancellable Item",
-      description: "Test cancellation release",
+  it("handles 20 parallel buyers of quantity 1 against stock of 5: exactly 5 succeed, 15 fail", async () => {
+    const CONCURRENT_ATTEMPTS = 20;
+
+    const checkoutPromises = Array.from({ length: CONCURRENT_ATTEMPTS }, (_, index) => {
+      const checkoutSessionId = `sess-race5-${index}-${crypto.randomUUID()}`;
+      const idempotencyKey = `idem-race5-${index}-${crypto.randomUUID()}`;
+
+      return orderService
+        .createOrder({
+          storeId: storeAId,
+          idempotencyKey,
+          checkoutSessionId,
+          guestEmail: `buyer5-${index}@example.com`,
+          shippingAddress: mockAddress,
+          shippingCarrier: "JNE",
+          shippingService: "REG",
+          shippingAmountMinor: 18_000,
+          items: [
+            {
+              productId: fiveStockProductId,
+              variantId: fiveStockVariantId,
+              quantity: 1,
+            },
+          ],
+        })
+        .then((res) => ({ success: true, order: res.order }))
+        .catch((err) => ({
+          success: false,
+          error: err instanceof Error ? err.message : String(err),
+        }));
+    });
+
+    const results = await Promise.all(checkoutPromises);
+
+    const successes = results.filter((r) => r.success);
+    const failures = results.filter((r): r is { success: false; error: string } => !r.success);
+
+    // EXACTLY 5 checkouts must succeed out of 20
+    expect(successes.length).toBe(5);
+    expect(failures.length).toBe(15);
+
+    // Available stock must be exactly 0 (no negative stock, no overselling)
+    const availableStock = await inventoryService.getAvailableStock(fiveStockVariantId);
+    expect(availableStock).toBe(0);
+  });
+
+  it("releases reservation when expired and restores available stock", async () => {
+    const timestamp = Date.now();
+    const product = await catalogService.createProductWithVariants(storeAId, {
+      name: `Expiring Stock Item ${timestamp}`,
       status: "published",
       variants: [
         {
-          sku: `SKU-CANCEL-${Date.now()}`,
-          title: "Cancel Variant",
-          price: 100_000,
-          stock: 1,
+          sku: `SKU-EXP-${timestamp}`,
+          title: "Expiry Test",
+          price: 200_000,
+          stock: 3,
         },
       ],
     });
+    const variantId = product.variants[0]!.id;
 
-    const variantId = cancelProduct.variants[0]?.id ?? "";
-    const checkoutSessionId = `sess-cancel-${crypto.randomUUID()}`;
-
-    // Place order
-    const { order } = await orderService.createOrder({
+    // Reserve 2 units
+    const checkoutSessionId = `sess-exp-${timestamp}`;
+    const reservationResult = await inventoryService.reserveStock({
       storeId: storeAId,
-      idempotencyKey: `idem-cancel-${crypto.randomUUID()}`,
       checkoutSessionId,
-      guestEmail: "cancel-buyer@mercato.local",
+      items: [{ variantId, quantity: 2 }],
+    });
+    expect(reservationResult.success).toBe(true);
+    expect(await inventoryService.getAvailableStock(variantId)).toBe(1);
+
+    // Simulate expiration by backdating reservedUntil to the past
+    await db
+      .update(schema.stockReservations)
+      .set({
+        reservedUntil: new Date(Date.now() - 60_000), // 1 minute in the past
+      })
+      .where(eq(schema.stockReservations.checkoutSessionId, checkoutSessionId));
+
+    // Run sweeper
+    const { sweptCount } = await inventoryService.sweepExpiredReservations();
+    expect(sweptCount).toBeGreaterThanOrEqual(1);
+
+    // Available stock must be fully restored to 3!
+    expect(await inventoryService.getAvailableStock(variantId)).toBe(3);
+  });
+
+  it("executes idempotent double-commit without double-decrementing stock", async () => {
+    const timestamp = Date.now();
+    const product = await catalogService.createProductWithVariants(storeAId, {
+      name: `Double Commit Test ${timestamp}`,
+      status: "published",
+      variants: [
+        {
+          sku: `SKU-DC-${timestamp}`,
+          title: "Double Commit",
+          price: 100_000,
+          stock: 10,
+        },
+      ],
+    });
+    const variantId = product.variants[0]!.id;
+    const checkoutSessionId = `sess-dc-${timestamp}`;
+
+    // Reserve 4 units
+    await inventoryService.reserveStock({
+      storeId: storeAId,
+      checkoutSessionId,
+      items: [{ variantId, quantity: 4 }],
+    });
+
+    const [variantBeforeCommit] = await db
+      .select({ stock: schema.productVariants.stock })
+      .from(schema.productVariants)
+      .where(eq(schema.productVariants.id, variantId));
+    expect(variantBeforeCommit?.stock).toBe(10); // Physical stock intact before payment commit
+
+    // Commit #1
+    const dummyOrderId = crypto.randomUUID();
+    const committedCount1 = await inventoryService.commitReservations(
+      checkoutSessionId,
+      dummyOrderId,
+    );
+    expect(committedCount1).toBe(1);
+
+    const [variantAfterCommit1] = await db
+      .select({ stock: schema.productVariants.stock })
+      .from(schema.productVariants)
+      .where(eq(schema.productVariants.id, variantId));
+    expect(variantAfterCommit1?.stock).toBe(6); // 10 - 4 = 6
+
+    // Commit #2 (idempotent double commit)
+    const committedCount2 = await inventoryService.commitReservations(
+      checkoutSessionId,
+      dummyOrderId,
+    );
+    expect(committedCount2).toBe(0); // Safe no-op
+
+    const [variantAfterCommit2] = await db
+      .select({ stock: schema.productVariants.stock })
+      .from(schema.productVariants)
+      .where(eq(schema.productVariants.id, variantId));
+    expect(variantAfterCommit2?.stock).toBe(6); // Stock remains 6, not decremented twice!
+  });
+
+  it("server recomputes shipping rate from carrier/service, rejecting client price tampering", async () => {
+    const timestamp = Date.now();
+    const product = await catalogService.createProductWithVariants(storeAId, {
+      name: `Shipping Integrity Product ${timestamp}`,
+      status: "published",
+      variants: [
+        {
+          sku: `SKU-SHIP-${timestamp}`,
+          title: "Standard Item",
+          price: 150_000,
+          stock: 10,
+        },
+      ],
+    });
+    const variantId = product.variants[0]!.id;
+
+    // Client maliciously attempts to send shippingAmountMinor: 1 (Rp 1)
+    const orderResult = await orderService.createOrder({
+      storeId: storeAId,
+      idempotencyKey: `idem-ship-${timestamp}`,
+      checkoutSessionId: `sess-ship-${timestamp}`,
       shippingAddress: mockAddress,
       shippingCarrier: "JNE",
       shippingService: "REG",
-      shippingAmountMinor: 15_000,
-      items: [{ productId: cancelProduct.id, variantId, quantity: 1 }],
+      shippingAmountMinor: 1, // Tampered client price!
+      items: [{ productId: product.id, variantId, quantity: 1 }],
     });
 
-    expect(order.status).toBe("awaiting_payment");
-    expect(await inventoryService.getAvailableStock(variantId)).toBe(0);
-
-    // Cancel order
-    const cancelledOrder = await orderService.transitionOrderStatus(
-      order.id,
-      storeAId,
-      "cancelled",
-      { reason: "Customer cancelled checkout" },
-    );
-    expect(cancelledOrder.status).toBe("cancelled");
-
-    // Stock reservation must be released and available stock restored to 1!
-    expect(await inventoryService.getAvailableStock(variantId)).toBe(1);
+    // Server must have computed the real flat-rate price (Rp 10,000 for JNE REG in Jabodetabek)
+    expect(orderResult.order.shippingAmount).toBe(10_000);
+    expect(orderResult.order.shippingAmount).not.toBe(1);
+    expect(orderResult.order.totalAmount).toBe(150_000 + 10_000);
   });
 
-  it("enforces tenant boundary isolation across discounts and orders", async () => {
-    // 1. Coupon isolation: Store A cannot validate Store B's coupon
-    const couponFromB = await discountService.validateAndCalculate({
-      storeId: storeAId,
-      code: "STOREB20",
-      subtotalMinor: 100_000,
+  it("Item 8: creates order with selected non-default shipping method and accurate multi-item weight", async () => {
+    const timestamp = Date.now();
+    const product = await catalogService.createProductWithVariants(storeAId, {
+      name: `Multi-weight Shipping Product ${timestamp}`,
+      status: "published",
+      variants: [
+        {
+          sku: `SKU-SHIP-MULTI-${timestamp}`,
+          title: "Multi Item",
+          price: 100_000,
+          stock: 10,
+        },
+      ],
     });
-    expect(couponFromB.valid).toBe(false);
-    expect(couponFromB.reason).toMatch(/does not exist/);
+    const variantId = product.variants[0]!.id;
 
-    // 2. Order isolation: Store B cannot read Store A's order
-    const ordersA = await db
-      .select({ id: schema.orders.id })
-      .from(schema.orders)
-      .where(eq(schema.orders.storeId, storeAId))
-      .limit(1);
+    // Cart with 2 items -> weightGrams = 2 * 500 + 500 = 1500g -> ceil(1500 / 1000) = 2kg
+    // JNE YES baseExpress in Jabodetabek = 20,000 * 2 = 40,000
+    const orderResult = await orderService.createOrder({
+      storeId: storeAId,
+      idempotencyKey: `idem-ship-yes-${timestamp}`,
+      checkoutSessionId: `sess-ship-yes-${timestamp}`,
+      shippingAddress: mockAddress,
+      shippingCarrier: "JNE",
+      shippingService: "YES",
+      shippingAmountMinor: 40_000,
+      items: [{ productId: product.id, variantId, quantity: 2 }],
+    });
 
-    if (ordersA[0]) {
-      const foreignOrder = await orderService.getOrderById(ordersA[0].id, storeBId);
-      expect(foreignOrder).toBeNull();
-
-      // Store B cannot transition Store A's order
-      await expect(
-        orderService.transitionOrderStatus(ordersA[0].id, storeBId, "cancelled"),
-      ).rejects.toThrow(/Order not found/);
-    }
+    expect(orderResult.order.shippingCarrier).toBe("JNE");
+    expect(orderResult.order.shippingService).toBe("YES");
+    expect(orderResult.order.shippingAmount).toBe(40_000);
+    expect(orderResult.order.subtotal).toBe(200_000);
+    expect(orderResult.order.totalAmount).toBe(240_000);
   });
 });

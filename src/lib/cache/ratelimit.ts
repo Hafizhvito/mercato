@@ -1,4 +1,5 @@
 import { Ratelimit } from "@upstash/ratelimit";
+import { PHASE_PRODUCTION_BUILD } from "next/constants";
 import { env } from "@/lib/env";
 import { redis } from "./index";
 
@@ -71,18 +72,51 @@ export class UpstashRateLimiter implements RateLimiter {
   }
 }
 
-function isDummyUpstash(): boolean {
-  const url = env.UPSTASH_REDIS_REST_URL || "";
+export function isDummyUpstash(url = env.UPSTASH_REDIS_REST_URL || ""): boolean {
   return !url || url.includes("example-upstash") || url.includes("dummy") || url.includes("fake");
 }
 
-function createLimiter(
+export function createLimiter(
   maxRequests: number,
   windowStr: `${number} ${"ms" | "s" | "m" | "h" | "d"}`,
   windowMs: number,
   prefix: string,
+  config?: {
+    upstashUrl?: string;
+    upstashToken?: string;
+    nodeEnv?: string;
+    nextPhase?: string;
+  },
 ): RateLimiter {
-  if (isDummyUpstash() || process.env.NODE_ENV === "test") {
+  const nodeEnv = config?.nodeEnv ?? process.env.NODE_ENV;
+  const nextPhase = config?.nextPhase ?? process.env.NEXT_PHASE;
+  const upstashUrl = config?.upstashUrl ?? env.UPSTASH_REDIS_REST_URL;
+  const upstashToken = config?.upstashToken ?? env.UPSTASH_REDIS_REST_TOKEN;
+
+  const isProduction = nodeEnv === "production";
+  const isBuildPhase = nextPhase === PHASE_PRODUCTION_BUILD;
+
+  // In production runtime (outside the Next.js production build phase),
+  // Upstash credentials MUST be valid. This check does NOT depend on CI or SKIP_ENV_VALIDATION.
+  if (isProduction && !isBuildPhase) {
+    if (isDummyUpstash(upstashUrl) || !upstashToken) {
+      throw new Error(
+        "Fatal: Production environment requires valid UPSTASH_REDIS_REST_URL and UPSTASH_REDIS_REST_TOKEN. " +
+          "MemoryRateLimiter fallback is strictly prohibited in production runtime.",
+      );
+    }
+
+    return new UpstashRateLimiter(
+      new Ratelimit({
+        redis,
+        limiter: Ratelimit.slidingWindow(maxRequests, windowStr),
+        analytics: true,
+        prefix,
+      }),
+    );
+  }
+
+  if (isDummyUpstash(upstashUrl) || nodeEnv === "test" || isBuildPhase) {
     return new MemoryRateLimiter(maxRequests, windowMs);
   }
 

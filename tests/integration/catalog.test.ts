@@ -148,7 +148,7 @@ describe("Phase 2: Catalog, Storage, and Search Services", () => {
         ],
         images: [
           {
-            url: "https://images.unsplash.com/photo-test-flanel",
+            url: "/images/products/kemeja-batik-solo.svg",
             altText: "Kemeja Flanel",
             position: 0,
           },

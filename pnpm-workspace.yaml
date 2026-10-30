@@ -33,3 +33,4 @@ minimumReleaseAgeExclude:
   - '@aws-sdk/nested-clients@3.997.53'
   - '@aws-sdk/s3-request-presigner@3.1160.0'
   - '@aws-sdk/token-providers@3.1160.0'
+  - stripe@23.1.0

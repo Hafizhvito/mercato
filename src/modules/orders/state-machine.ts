@@ -7,7 +7,7 @@ export const ORDER_TRANSITIONS: Record<OrderStatus, readonly OrderStatus[]> = {
   processing: ["shipped", "cancelled", "refunded"],
   shipped: ["delivered", "refunded"],
   delivered: ["refunded"],
-  cancelled: [],
+  cancelled: ["paid"], // Late payment revival when stock re-reserved
   refunded: [],
 };
 

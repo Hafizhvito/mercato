@@ -1,20 +1,33 @@
 import { CheckCircle2, Clock, Package, Truck } from "lucide-react";
 import type { Metadata } from "next";
+import { headers } from "next/headers";
 import Link from "next/link";
 import { notFound } from "next/navigation";
+import { getTranslations } from "next-intl/server";
 import { Header } from "@/components/storefront/Header";
+import { PaymentActionCard } from "@/components/storefront/PaymentActionCard";
+import { auth } from "@/lib/auth";
 import { db } from "@/lib/db";
 import * as schema from "@/lib/db/schema";
 import { createMoney, formatMoney } from "@/lib/money";
 import { orderService } from "@/modules/orders/service";
-
-export const instant = false;
+import { paymentService } from "@/modules/payments/service";
 
 interface Props {
   params: Promise<{
     locale: string;
     orderNumber: string;
   }>;
+  searchParams?: Promise<{
+    token?: string;
+  }>;
+}
+
+function maskPhone(phone: string): string {
+  if (!phone || phone.length < 7) return phone;
+  const start = phone.slice(0, 4);
+  const end = phone.slice(-3);
+  return `${start} •••• ${end}`;
 }
 
 export async function generateMetadata({ params }: Props): Promise<Metadata> {
@@ -25,19 +38,58 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
   };
 }
 
-export default async function OrderConfirmationPage({ params }: Props) {
+export const instant = false;
+
+export default async function OrderConfirmationPage({ params, searchParams }: Props) {
   const { locale, orderNumber } = await params;
+  const { token } = (await searchParams) ?? {};
 
   const [store] = await db.select({ id: schema.stores.id }).from(schema.stores).limit(1);
   if (!store) notFound();
 
-  const order = await orderService.getOrderByNumber(orderNumber, store.id);
-  if (!order) notFound();
+  const reqHeaders = await headers();
+  const session = await auth.api.getSession({ headers: reqHeaders });
+
+  const access = await orderService.verifyOrderAccess({
+    orderNumber,
+    storeId: store.id,
+    userId: session?.user?.id ?? null,
+    userRole: (session?.user as { role?: string })?.role ?? null,
+    token: token ?? null,
+  });
+
+  if (!access.authorized || !access.order) {
+    notFound();
+  }
+
+  const order = access.order;
+  const t = await getTranslations({ locale, namespace: "order" });
+
+  const statusLabel =
+    order.paymentStatus === "needs_review"
+      ? t("statusNeedsReview")
+      : order.status === "awaiting_payment"
+        ? t("statusAwaitingPayment")
+        : order.status === "paid"
+          ? t("statusPaid")
+          : order.status === "processing"
+            ? t("statusProcessing")
+            : order.status === "shipped"
+              ? t("statusShipped")
+              : order.status === "delivered"
+                ? t("statusDelivered")
+                : order.status === "cancelled"
+                  ? t("statusCancelled")
+                  : order.status === "refunded"
+                    ? t("statusRefunded")
+                    : t("statusPending");
 
   const [items, history] = await Promise.all([
     orderService.getOrderItems(order.id),
     orderService.getOrderStatusHistory(order.id),
   ]);
+
+  const availableProviders = paymentService.getAvailableProviders();
 
   const formattedSubtotal = formatMoney(createMoney(order.subtotal, order.currency));
   const formattedShipping = formatMoney(createMoney(order.shippingAmount, order.currency));
@@ -56,22 +108,18 @@ export default async function OrderConfirmationPage({ params }: Props) {
               <CheckCircle2 className="h-8 w-8" />
             </div>
             <span className="text-xs font-semibold uppercase tracking-wider text-emerald-700 bg-emerald-50 px-3 py-1 rounded-full border border-emerald-200">
-              Order Confirmed
+              {t("title")}
             </span>
             <h1 className="mt-3 text-3xl font-extrabold tracking-tight text-zinc-950">
-              Order #{order.orderNumber}
+              {t("orderNumber")}: #{order.orderNumber}
             </h1>
-            <p className="mt-2 text-sm text-zinc-500">
-              {locale === "id"
-                ? "Terima kasih atas pesanan Anda. Kami telah mencatat pesanan Anda dan menunggu pembayaran."
-                : "Thank you for your order. We have recorded your purchase and are awaiting payment."}
-            </p>
+            <p className="mt-2 text-sm text-zinc-500">{t("orderPlacedTitle")}</p>
 
             {/* Status Badge */}
             <div className="mt-6 inline-flex items-center gap-2 rounded-xl border border-amber-200 bg-amber-50 px-4 py-2 text-xs font-medium text-amber-800">
               <Clock className="h-4 w-4" />
               <span>
-                Status: <strong className="uppercase">{order.status.replace("_", " ")}</strong>
+                {t("status")}: <strong>{statusLabel}</strong>
               </span>
             </div>
           </div>
@@ -81,7 +129,7 @@ export default async function OrderConfirmationPage({ params }: Props) {
             <div className="rounded-2xl border border-zinc-200 bg-white p-6 shadow-xs md:col-span-2 space-y-6">
               <h2 className="text-base font-bold text-zinc-900 flex items-center gap-2">
                 <Package className="h-4 w-4 text-zinc-500" />
-                Purchased Items ({items.length})
+                {t("purchasedItems")} ({items.length})
               </h2>
 
               <div className="divide-y divide-zinc-200">
@@ -105,23 +153,23 @@ export default async function OrderConfirmationPage({ params }: Props) {
               {/* Order Calculations */}
               <div className="border-t border-zinc-200 pt-4 space-y-2 text-xs">
                 <div className="flex justify-between text-zinc-600">
-                  <span>Subtotal</span>
+                  <span>{t("subtotal")}</span>
                   <span className="font-medium text-zinc-900">{formattedSubtotal}</span>
                 </div>
                 <div className="flex justify-between text-zinc-600">
                   <span>
-                    Shipping ({order.shippingCarrier} - {order.shippingService})
+                    {t("shipping")} ({order.shippingCarrier} - {order.shippingService})
                   </span>
                   <span className="font-medium text-zinc-900">{formattedShipping}</span>
                 </div>
                 {order.discountAmount > 0 && (
                   <div className="flex justify-between text-emerald-700 font-medium">
-                    <span>Discount</span>
+                    <span>{t("discount")}</span>
                     <span>-{formattedDiscount}</span>
                   </div>
                 )}
                 <div className="border-t border-zinc-200 pt-3 flex justify-between text-sm font-bold text-zinc-950">
-                  <span>Total Amount</span>
+                  <span>{t("total")}</span>
                   <span>{formattedTotal}</span>
                 </div>
               </div>
@@ -129,16 +177,29 @@ export default async function OrderConfirmationPage({ params }: Props) {
 
             {/* Shipping Info Card */}
             <div className="space-y-6">
+              {(order.status === "awaiting_payment" || order.paymentStatus === "needs_review") && (
+                <PaymentActionCard
+                  orderId={order.id}
+                  orderNumber={order.orderNumber}
+                  token={token}
+                  amountFormatted={formattedTotal}
+                  locale={locale}
+                  initialProvider={order.paymentProvider}
+                  availableProviders={availableProviders}
+                  paymentStatus={order.paymentStatus}
+                />
+              )}
+
               <div className="rounded-2xl border border-zinc-200 bg-white p-6 shadow-xs">
                 <h3 className="text-sm font-bold text-zinc-900 mb-3 flex items-center gap-2">
                   <Truck className="h-4 w-4 text-zinc-500" />
-                  Shipping Address
+                  {t("shippingDestination")}
                 </h3>
                 <div className="text-xs text-zinc-600 space-y-1">
                   <p className="font-semibold text-zinc-900">
                     {order.shippingAddress.recipientName}
                   </p>
-                  <p>{order.shippingAddress.phone}</p>
+                  <p>{maskPhone(order.shippingAddress.phone)}</p>
                   <p>{order.shippingAddress.street}</p>
                   <p>
                     {order.shippingAddress.district}, {order.shippingAddress.city}
@@ -152,14 +213,16 @@ export default async function OrderConfirmationPage({ params }: Props) {
 
               {/* Status History Timeline */}
               <div className="rounded-2xl border border-zinc-200 bg-white p-6 shadow-xs">
-                <h3 className="text-sm font-bold text-zinc-900 mb-3">Order History</h3>
+                <h3 className="text-sm font-bold text-zinc-900 mb-3">{t("timeline")}</h3>
                 <div className="space-y-3">
-                  {history.map((event) => (
+                  {history.map((event, index) => (
                     <div key={event.id} className="border-l-2 border-zinc-300 pl-3 py-0.5 text-xs">
                       <p className="font-semibold uppercase tracking-wider text-zinc-800">
                         {event.toStatus.replace("_", " ")}
                       </p>
-                      {event.reason && <p className="text-zinc-500">{event.reason}</p>}
+                      <p className="text-zinc-500">
+                        {event.reason ?? (index === 0 ? t("timelineInitial") : "Status updated")}
+                      </p>
                       <p className="text-[10px] text-zinc-400 mt-0.5">
                         {new Date(event.createdAt).toLocaleString(
                           locale === "id" ? "id-ID" : "en-US",
@@ -175,7 +238,7 @@ export default async function OrderConfirmationPage({ params }: Props) {
                   href={`/${locale}/catalog`}
                   className="inline-block rounded-xl bg-zinc-900 px-5 py-2.5 text-xs font-semibold text-white hover:bg-zinc-800 transition"
                 >
-                  Continue Shopping
+                  {t("continueShopping")}
                 </Link>
               </div>
             </div>

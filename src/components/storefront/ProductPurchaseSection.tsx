@@ -2,6 +2,7 @@
 
 import { AlertCircle, Check, Loader2, ShoppingBag } from "lucide-react";
 import Link from "next/link";
+import { useTranslations } from "next-intl";
 import { useMemo, useState, useTransition } from "react";
 import { createMoney, formatMoney } from "@/lib/money";
 import { addToCartAction } from "@/modules/cart/actions";
@@ -13,6 +14,8 @@ interface ProductPurchaseSectionProps {
 }
 
 export function ProductPurchaseSection({ product, locale }: ProductPurchaseSectionProps) {
+  const t = useTranslations("product");
+
   // Extract unique options from variants or product options
   const hasMultipleVariants = product.variants.length > 1;
 
@@ -65,18 +68,16 @@ export function ProductPurchaseSection({ product, locale }: ProductPurchaseSecti
         {isOutOfStock ? (
           <span className="inline-flex items-center gap-1.5 rounded-full bg-rose-50 border border-rose-200 px-3 py-1 text-xs font-semibold text-rose-700">
             <AlertCircle className="h-3.5 w-3.5" />
-            {locale === "id" ? "Stok Habis" : "Out of Stock"}
+            {t("outOfStock")}
           </span>
         ) : currentStock <= 5 ? (
           <span className="inline-flex items-center gap-1.5 rounded-full bg-amber-50 border border-amber-200 px-3 py-1 text-xs font-semibold text-amber-700">
-            {locale === "id"
-              ? `Tersisa ${currentStock} item lagi!`
-              : `Only ${currentStock} items left in stock!`}
+            {t("lowStock", { stock: currentStock })}
           </span>
         ) : (
           <span className="inline-flex items-center gap-1.5 rounded-full bg-emerald-50 border border-emerald-200 px-3 py-1 text-xs font-semibold text-emerald-700">
             <Check className="h-3.5 w-3.5" />
-            {locale === "id" ? "Stok Tersedia" : "In Stock"}
+            {t("inStock")}
           </span>
         )}
       </div>
@@ -85,7 +86,7 @@ export function ProductPurchaseSection({ product, locale }: ProductPurchaseSecti
       {hasMultipleVariants && (
         <div className="space-y-3 border-t border-zinc-200 pt-6">
           <span className="block text-xs font-semibold uppercase tracking-wider text-zinc-700">
-            {locale === "id" ? "Pilihan Varian:" : "Select Variant:"}
+            {t("selectVariant")}
           </span>
           <div className="grid grid-cols-2 gap-2 sm:grid-cols-3">
             {product.variants.map((variant) => {
@@ -155,15 +156,7 @@ export function ProductPurchaseSection({ product, locale }: ProductPurchaseSecti
             ) : (
               <ShoppingBag className="h-4 w-4" />
             )}
-            {isOutOfStock
-              ? locale === "id"
-                ? "Stok Habis"
-                : "Out of Stock"
-              : isPending
-                ? "Adding..."
-                : locale === "id"
-                  ? "Tambah ke Keranjang"
-                  : "Add to Cart"}
+            {isOutOfStock ? t("outOfStock") : isPending ? t("adding") : t("addToCart")}
           </button>
         </div>
 
@@ -171,17 +164,13 @@ export function ProductPurchaseSection({ product, locale }: ProductPurchaseSecti
           <div className="rounded-lg bg-emerald-50 border border-emerald-200 p-3 text-xs text-emerald-800 flex items-center justify-between gap-2">
             <div className="flex items-center gap-2">
               <Check className="h-4 w-4 text-emerald-600 shrink-0" />
-              <span>
-                {locale === "id"
-                  ? `Berhasil menambahkan ${quantity} item ke keranjang!`
-                  : `Added ${quantity} item(s) to shopping cart!`}
-              </span>
+              <span>{t("addedSuccess", { quantity })}</span>
             </div>
             <Link
               href={`/${locale}/cart`}
               className="font-bold underline hover:text-emerald-950 shrink-0"
             >
-              {locale === "id" ? "Lihat Keranjang →" : "View Cart →"}
+              {t("viewCart")}
             </Link>
           </div>
         )}
@@ -195,9 +184,7 @@ export function ProductPurchaseSection({ product, locale }: ProductPurchaseSecti
         </p>
         {product.category && (
           <p>
-            <span className="font-semibold text-zinc-700">
-              {locale === "id" ? "Kategori:" : "Category:"}
-            </span>{" "}
+            <span className="font-semibold text-zinc-700">{t("category")}</span>{" "}
             {product.category.name}
           </p>
         )}

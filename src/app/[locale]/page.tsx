@@ -1,8 +1,8 @@
 import { ArrowRight, Package } from "lucide-react";
-import Image from "next/image";
 import Link from "next/link";
 import { setRequestLocale } from "next-intl/server";
 import { StorefrontHeader } from "@/components/storefront/Header";
+import { SafeImage } from "@/components/ui/SafeImage";
 import { db } from "@/lib/db";
 import * as schema from "@/lib/db/schema";
 import { createMoney, formatMoney } from "@/lib/money";
@@ -90,8 +90,9 @@ export default async function HomePage({ params }: { params: Promise<{ locale: s
                     className="group relative overflow-hidden rounded-xl border border-zinc-200 bg-zinc-100 p-6 flex flex-col justify-end min-h-48 hover:shadow-md transition"
                   >
                     {col.imageUrl && (
-                      <Image
+                      <SafeImage
                         src={col.imageUrl}
+                        fallbackSrc="/images/placeholder.svg"
                         alt={col.name}
                         fill
                         sizes="(max-width: 640px) 100vw, (max-width: 1024px) 50vw, 33vw"
@@ -153,8 +154,9 @@ export default async function HomePage({ params }: { params: Promise<{ locale: s
                 >
                   <div className="aspect-square w-full overflow-hidden bg-zinc-100 flex items-center justify-center relative">
                     {product.primaryImage ? (
-                      <Image
+                      <SafeImage
                         src={product.primaryImage}
+                        fallbackSrc="/images/placeholder.svg"
                         alt={product.name}
                         fill
                         sizes="(max-width: 640px) 50vw, (max-width: 1024px) 33vw, 25vw"

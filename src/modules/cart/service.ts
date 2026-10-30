@@ -1,6 +1,8 @@
 import { cartRepository } from "./repository";
 import type { Cart } from "./schema";
 
+export const MAX_CART_ITEM_QUANTITY = 10;
+
 export interface DetailedCartItem {
   id: string;
   productId: string;
@@ -26,6 +28,12 @@ export interface DetailedCart {
   totalQuantity: number;
   priceChanges: { name: string; oldPrice: number; newPrice: number }[];
   removedItems: { name: string; reason: string }[];
+  cappedItems: {
+    name: string;
+    requestedQuantity: number;
+    cappedQuantity: number;
+    reason: "MAX_ORDER_LIMIT" | "INSUFFICIENT_STOCK";
+  }[];
 }
 
 export class CartService {
@@ -53,6 +61,12 @@ export class CartService {
     const items: DetailedCartItem[] = [];
     const priceChanges: { name: string; oldPrice: number; newPrice: number }[] = [];
     const removedItems: { name: string; reason: string }[] = [];
+    const cappedItems: {
+      name: string;
+      requestedQuantity: number;
+      cappedQuantity: number;
+      reason: "MAX_ORDER_LIMIT" | "INSUFFICIENT_STOCK";
+    }[] = [];
 
     let subtotal = 0;
     let totalQuantity = 0;
@@ -85,15 +99,34 @@ export class CartService {
           newPrice: currentPrice,
         });
         effectivePrice = currentPrice;
-        // Update database with current catalog price
         await cartRepository.updateItemQuantity(row.id, row.quantity);
       }
 
-      // 3. Enforce maximum quantity (capped at 10 or current available stock)
+      // 3. Enforce maximum quantity (capped at MAX_CART_ITEM_QUANTITY or current stock)
       const stock = Math.max(0, row.variant.stock);
-      const safeQuantity = Math.min(row.quantity, Math.max(1, stock), 10);
+      let safeQuantity = row.quantity;
+      let capReason: "MAX_ORDER_LIMIT" | "INSUFFICIENT_STOCK" | null = null;
+
+      if (safeQuantity > MAX_CART_ITEM_QUANTITY) {
+        safeQuantity = MAX_CART_ITEM_QUANTITY;
+        capReason = "MAX_ORDER_LIMIT";
+      }
+
+      if (safeQuantity > stock) {
+        safeQuantity = Math.max(1, stock);
+        capReason = "INSUFFICIENT_STOCK";
+      }
+
       if (safeQuantity !== row.quantity) {
         await cartRepository.updateItemQuantity(row.id, safeQuantity);
+        if (capReason) {
+          cappedItems.push({
+            name: `${row.product.name} (${row.variant.title})`,
+            requestedQuantity: row.quantity,
+            cappedQuantity: safeQuantity,
+            reason: capReason,
+          });
+        }
       }
 
       const lineTotal = effectivePrice * safeQuantity;
@@ -126,6 +159,7 @@ export class CartService {
       totalQuantity,
       priceChanges,
       removedItems,
+      cappedItems,
     };
   }
 

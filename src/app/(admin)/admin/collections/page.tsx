@@ -1,7 +1,7 @@
 import { Layers, Trash2 } from "lucide-react";
 import { headers } from "next/headers";
-import Image from "next/image";
 import { redirect } from "next/navigation";
+import { SafeImage } from "@/components/ui/SafeImage";
 import { auth } from "@/lib/auth";
 import { db } from "@/lib/db";
 import * as schema from "@/lib/db/schema";
@@ -141,8 +141,9 @@ export default async function AdminCollectionsPage() {
                   <div className="flex items-center gap-4">
                     {col.imageUrl ? (
                       <div className="relative h-12 w-12 shrink-0 overflow-hidden rounded-lg border border-zinc-200">
-                        <Image
+                        <SafeImage
                           src={col.imageUrl}
+                          fallbackSrc="/images/placeholder.svg"
                           alt={col.name}
                           fill
                           sizes="48px"

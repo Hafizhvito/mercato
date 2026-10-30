@@ -1,10 +1,11 @@
 "use client";
 
 import { Loader2, Search } from "lucide-react";
-import Image from "next/image";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
+import { useTranslations } from "next-intl";
 import { useEffect, useRef, useState } from "react";
+import { SafeImage } from "@/components/ui/SafeImage";
 import type { AutocompleteResult } from "@/lib/search";
 
 interface SearchBarProps {
@@ -13,6 +14,7 @@ interface SearchBarProps {
 }
 
 export function SearchBar({ locale, initialQuery = "" }: SearchBarProps) {
+  const t = useTranslations("common");
   const router = useRouter();
   const [query, setQuery] = useState(initialQuery);
   const [results, setResults] = useState<AutocompleteResult[]>([]);
@@ -76,11 +78,7 @@ export function SearchBar({ locale, initialQuery = "" }: SearchBarProps) {
           onFocus={() => {
             if (results.length > 0) setIsOpen(true);
           }}
-          placeholder={
-            locale === "id"
-              ? "Cari produk, kategori, atau koleksi..."
-              : "Search products, categories, collections..."
-          }
+          placeholder={t("searchPlaceholder")}
           className="w-full rounded-full border border-zinc-200 bg-zinc-50/50 py-2 pl-10 pr-10 text-sm text-zinc-900 placeholder-zinc-400 focus:border-zinc-900 focus:bg-white focus:outline-hidden"
         />
         <Search className="absolute left-3.5 top-1/2 h-4 w-4 -translate-y-1/2 text-zinc-400" />
@@ -102,8 +100,9 @@ export function SearchBar({ locale, initialQuery = "" }: SearchBarProps) {
               >
                 <div className="h-10 w-10 shrink-0 overflow-hidden rounded-md border border-zinc-200 bg-zinc-100 relative">
                   {item.primaryImage ? (
-                    <Image
+                    <SafeImage
                       src={item.primaryImage}
+                      fallbackSrc="/images/placeholder.svg"
                       alt={item.name}
                       fill
                       sizes="40px"
@@ -130,9 +129,7 @@ export function SearchBar({ locale, initialQuery = "" }: SearchBarProps) {
               onClick={handleSearchSubmit}
               className="text-xs font-medium text-zinc-600 hover:text-zinc-900"
             >
-              {locale === "id"
-                ? `Lihat semua hasil untuk "${query}"`
-                : `View all results for "${query}"`}
+              {t("viewAllResults", { query })}
             </button>
           </div>
         </div>

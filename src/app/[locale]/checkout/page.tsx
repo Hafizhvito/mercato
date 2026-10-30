@@ -3,7 +3,7 @@ import { redirect } from "next/navigation";
 import { CheckoutView } from "@/components/storefront/CheckoutView";
 import { Header } from "@/components/storefront/Header";
 import { getCartAction } from "@/modules/cart/actions";
-import { getProvinces } from "@/modules/shipping/data/indonesia-regions";
+import { getProvincesAction } from "@/modules/shipping/actions";
 
 export const metadata: Metadata = {
   title: "Checkout | Mercato",
@@ -20,7 +20,7 @@ export default async function CheckoutPage({ params }: { params: Promise<{ local
     redirect(`/${locale}/cart`);
   }
 
-  const provinces = getProvinces();
+  const provinces = await getProvincesAction();
 
   return (
     <div className="min-h-screen bg-zinc-50 flex flex-col">

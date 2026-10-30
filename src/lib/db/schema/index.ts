@@ -123,3 +123,5 @@ export * from "@/modules/catalog/schema";
 export * from "@/modules/discounts/schema";
 export * from "@/modules/inventory/schema";
 export * from "@/modules/orders/schema";
+export * from "@/modules/payments/schema";
+export * from "@/modules/shipping/schema";

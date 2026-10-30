@@ -34,12 +34,17 @@ This document outlines planned enhancements and deferred features across upcomin
 - [x] Explicit order state machine (`ORDER_TRANSITIONS`) with immutable audit log (`order_status_history`) and variant financial snapshotting
 - [x] High-concurrency integration test suite verifying single-unit stock integrity under N parallel checkouts with zero overselling and tenant boundary isolation
 
-## Phase 4: Payment Integrations
-- Midtrans Snap and Core API adapter (QRIS, Virtual Accounts, e-wallets)
-- Stripe adapter for international credit and debit cards
-- Cryptographically verified, idempotent webhook ingestion
-- Order confirmation emails via Resend with React Email templates
-- Automated inventory restoration upon expired checkout sessions
+## Phase 4: Payments, Webhooks, Emails, and Financial Hardening [COMPLETED]
+- [x] Midtrans Snap and Core API adapter (QRIS, GoPay, ShopeePay, BCA/Mandiri/BNI/BRI Virtual Accounts)
+- [x] Hosted Stripe Checkout adapter with bi-directional IDR minor unit conversion (ADR 0021)
+- [x] Cryptographically verified, idempotent webhook ingestion (`/api/webhooks/midtrans` and `/api/webhooks/stripe`)
+- [x] Deterministic late payment recovery policy (ADR 0022: stock re-reservation or automatic gateway refund)
+- [x] Transactional merchant refund engine with inventory restocking, audit trail, and gateway dispatch
+- [x] Transactional email service with React Email templates (Verification, Password Reset, Order Confirmation, Payment Received, Order Shipped) and Resend / console fallback
+- [x] Customer IDOR protection on order confirmation via cryptographically secure guest access tokens
+- [x] Complete Indonesian regional administrative dataset (Kepmendagri No 300.2.2-2138 Tahun 2025: 38 provinces, 514 regencies, 7,265 districts)
+- [x] Storefront cart quantity caps (`MAX_CART_ITEM_QUANTITY = 10`) with dynamic alert banners
+- [x] Zero-secret public repository hygiene with Gitleaks workflow, SECURITY.md, and Dependabot automation
 
 ## Phase 5: Operations and Merchant Dashboard
 - Real-time order fulfillment pipeline with courier tracking numbers

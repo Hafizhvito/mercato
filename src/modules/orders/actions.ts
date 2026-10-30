@@ -5,6 +5,8 @@ import { headers } from "next/headers";
 import { auth } from "@/lib/auth";
 import { db } from "@/lib/db";
 import * as schema from "@/lib/db/schema";
+import { emailService } from "@/lib/email";
+import { logger } from "@/lib/logger";
 import { cartService } from "@/modules/cart/service";
 import { discountService } from "@/modules/discounts/service";
 import { shippingService } from "@/modules/shipping/service";
@@ -75,10 +77,34 @@ export async function submitCheckoutAction(input: {
     await cartService.clearCart(input.cartId);
   }
 
+  // Trigger order confirmation email
+  const emailTo = input.guestEmail ?? session?.user?.email;
+  if (emailTo) {
+    const formattedTotal = new Intl.NumberFormat("id-ID", {
+      style: "currency",
+      currency: result.order.currency,
+    }).format(result.order.totalAmount);
+
+    emailService
+      .sendOrderConfirmationEmail({
+        to: emailTo,
+        orderNumber: result.order.orderNumber,
+        totalAmountFormatted: formattedTotal,
+        orderUrl: `${process.env.NEXT_PUBLIC_APP_URL || "http://localhost:3000"}/orders/${result.order.orderNumber}?token=${result.order.guestAccessToken}`,
+      })
+      .catch((err) => {
+        logger.error(
+          { err, orderNumber: result.order.orderNumber },
+          "Failed to send order confirmation email",
+        );
+      });
+  }
+
   revalidatePath("/cart");
   return {
     success: true,
     orderNumber: result.order.orderNumber,
     orderId: result.order.id,
+    guestAccessToken: result.order.guestAccessToken,
   };
 }

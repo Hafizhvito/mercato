@@ -183,3 +183,39 @@ This document records the architectural and engineering decisions made for the M
 * **Context:** The Indonesian e-commerce market requires localized address hierarchy (Province -> Regency/City -> District -> Postal Code) and integration with domestic logistics providers (JNE, SiCepat, POS Indonesia). Coupling checkout directly to external courier APIs introduces external latency and downtime vulnerabilities during storefront checkout.
 * **Decision:** Implement a `ShippingProvider` interface with a primary deterministic `FlatRateShippingProvider` (providing tiered Regular, Express, and Same-Day options with volumetric calculation) and an extensible `RajaOngkirShippingProvider` for live API integration. Address lookups utilize an in-memory hierarchical dataset sourced from the open Kemendagri administrative boundary registry (MIT licensed), enabling instant, zero-latency cascading dropdowns in the checkout UI without external network calls.
 * **Consequences:** Checkout retains sub-50ms address validation and shipping calculation latency, operates reliably even during third-party courier API outages, and complies fully with commercial licensing requirements.
+
+---
+
+## ADR 0021: Hosted Stripe Checkout and Currency Handling Policy
+
+* **Status:** Accepted (Updated)
+* **Context:** Accepting credit and debit cards globally requires rigorous PCI-DSS compliance and 3D Secure 2.0 (SCA) authentication. Custom client-side card inputs drastically expand compliance scope to SAQ A-EP or SAQ D, requiring onerous external audits and sensitive tokenization handling. Furthermore, Stripe documentation ([Stripe Currencies](https://docs.stripe.com/currencies)) specifies minimum amounts (0.50 IDR) and maximum charges for other payment methods (up to 12 digits for IDR, 9,999,999,999.99 IDR), but Stripe merchant processing in Indonesia is subject to localized account eligibility.
+* **Decision:** Implement card payments using hosted Stripe Checkout Sessions (`mode: 'payment'`), redirecting customers to Stripe-hosted portals with customized branding and redirecting back to Mercato return routes (`/checkout/success`, `/checkout/failed`). For standard global currencies (USD, EUR, SGD), amounts are handled in their standard minor units. For Indonesian Rupiah (IDR), IDR is refused in code until a Stripe account that supports IDR is verified. Webhooks verify cryptographic authenticity using HMAC SHA-256 via Stripe's official SDK with raw request bodies.
+* **Consequences:** Reduces merchant PCI-DSS scope to the simplest SAQ A profile, delegates 3DS2 biometric authentication to Stripe, prevents untested IDR currency charge errors, and ensures bulletproof signature verification.
+
+---
+
+## ADR 0022: Midtrans Snap Integration and Late Payment Policy
+
+* **Status:** Accepted (Updated)
+* **Context:** The Indonesian commerce ecosystem relies heavily on QRIS, e-Wallets (GoPay, ShopeePay), and bank Virtual Accounts (BCA, Mandiri, BNI, BRI). Midtrans Snap provides an omnichannel redirect/modal solution. However, asynchronous payment rails (Virtual Accounts and convenience stores) frequently suffer from "late payments"—a customer transfers funds after the 15-minute checkout reservation TTL has expired and the order status has automatically transitioned to `cancelled`.
+* **Decision:** Integrate Midtrans Snap via server-to-server transaction tokens and SHA-512 signature hashing (`SHA-512(order_id + status_code + gross_amount + server_key)`). Establish a deterministic late payment policy executed inside interactive database transactions:
+  1. When a valid `settlement` webhook or status sync arrives for an order in `cancelled` status, the system checks whether inventory for all line items is still available.
+  2. If stock is available: the system re-reserves and commits the inventory, revives the order status directly from `cancelled` to `paid`, and dispatches a payment confirmation email.
+  3. If stock has been exhausted by another customer:
+     - **Default Policy (Manual Review):** The system marks `paymentStatus = "needs_review"`, records an audit log (`order.late_payment_flagged_for_review`), appends to order status history, and neutrally notifies the customer that their payment was received but the order is on hold for merchant review. The gateway refund is **not** called automatically. A visible `Needs Review` badge and audit trail appear in the merchant admin order console (`/admin/orders`), allowing the merchant to choose between manual fulfillment or issuing a refund.
+     - **Opt-in Automatic Refund:** Automatic provider refund is strictly guarded behind an explicit environment setting `AUTO_REFUND_ON_STOCK_EXHAUSTED=true` (off by default). When enabled, the system automatically triggers a refund call via `/v2/:order_id/refund`, records a `refunds` entry, and sets `paymentStatus = "refunded"`.
+* **Consequences:** Protects merchant operational control and funds by preventing automated gateway fee loss on disputed or replenishable inventory, while maintaining complete auditability and neutral customer transparency.
+
+
+---
+
+## ADR 0023: Indonesian Administrative Region Dataset and Logistics Provider Mapping
+
+* **Status:** Accepted
+* **Context:** Mercato embeds a comprehensive regional administrative boundary dataset of the Republic of Indonesia (38 provinces, 514 regencies/cities, 7,265 districts) to power zero-latency cascading address lookups and localized shipping calculation during checkout.
+* **Decision:**
+  1. **Government Source:** Kepmendagri No. 300.2.2-2430 Tahun 2025 (Kementerian Dalam Negeri Republik Indonesia).
+  2. **Compiler & License:** Compiled by `cahyadsn/wilayah` (Cahya DSN) and distributed under the MIT License (Copyright (c) 2017-2025 Cahya DSN).
+  3. **RajaOngkir Courier Mapping & Fallback:** RajaOngkir's API ([Komerce RajaOngkir API](https://komerceapi.readme.io/reference/rajaongkir-api)) uses proprietary sequential integer identifiers (`city_id` from 1 to 501), rather than Kemendagri codes. The Starter tier exists historically for legacy accounts, while modern integrations use Komerce API. When `RAJAONGKIR_API_KEY` is not configured, Mercato's shipping service gracefully falls back to the internal `FlatRateShippingProvider`, ensuring that lack of third-party courier credentials never impairs storefront customer checkout.
+* **Consequences:** Establishes clear licensing compliance for commercial operation, guarantees zero runtime coupling to external courier API availability during local development, and documents the relationship between Kemendagri administrative data and third-party commercial APIs.
