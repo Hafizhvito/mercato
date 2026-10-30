@@ -6,7 +6,7 @@ import * as schema from "@/lib/db/schema";
 import { ProductForm } from "@/modules/catalog/components/ProductForm";
 import { catalogRepository } from "@/modules/catalog/repository";
 
-export const instant = false;
+export const dynamic = "force-dynamic";
 
 interface ProductEditPageProps {
   params: Promise<{

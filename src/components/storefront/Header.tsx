@@ -2,10 +2,10 @@ import Link from "next/link";
 import { SearchBar } from "./SearchBar";
 
 interface StorefrontHeaderProps {
-  locale: string;
+  locale?: string;
 }
 
-export function StorefrontHeader({ locale }: StorefrontHeaderProps) {
+export function StorefrontHeader({ locale = "id" }: StorefrontHeaderProps) {
   return (
     <header className="sticky top-0 z-40 border-b border-zinc-200 bg-white/80 backdrop-blur-md">
       <div className="mx-auto flex h-16 max-w-7xl items-center justify-between gap-4 px-4 sm:px-6 lg:px-8">
@@ -54,3 +54,5 @@ export function StorefrontHeader({ locale }: StorefrontHeaderProps) {
     </header>
   );
 }
+
+export const Header = StorefrontHeader;

@@ -10,7 +10,7 @@ import {
   validateFileSignature,
 } from "@/lib/storage";
 
-export const instant = false;
+export const dynamic = "force-dynamic";
 
 export async function POST(req: NextRequest) {
   try {

@@ -114,12 +114,12 @@ This document records the architectural and engineering decisions made for the M
 
 ---
 
-## ADR 0013: Next.js 16 Dynamic Segment Opt-Out with Cache Components
+## ADR 0013: Next.js 16 Dynamic Segment Configuration and Partial Prerendering Boundaries
 
 * **Status:** Accepted
-* **Context:** In Next.js 16 with `cacheComponents: true` and `partialPrefetching: true`, legacy route segment config `export const dynamic = "force-dynamic"` is deprecated and rejected by the Turbopack compiler.
-* **Decision:** Protected merchant dashboards and auth boundary layouts declare `export const instant = false` and consume runtime dynamic headers (`await headers()`, `await cookies()`) within Suspense boundaries.
-* **Consequences:** Eliminates build-time static generation errors for authenticated routes, respects Next.js 16 partial prerendering boundaries, and guarantees that merchant data is never served stale from edge cache caches.
+* **Context:** In Next.js 16 with `cacheComponents: true` and `partialPrefetching: true`, route segment rendering must cleanly distinguish between static shells, on-demand edge streaming, and fully dynamic merchant routes.
+* **Decision:** Merchant dashboard routes and mutating API endpoints declare standard Next.js `export const dynamic = "force-dynamic"` to opt out of static prerendering. Storefront product and collection pages leverage Partial Prerendering (PPR), rendering static shell components while wrapping runtime dynamic customer state (e.g. cart badge, live stock, purchase buttons) within Suspense boundaries.
+* **Consequences:** Eliminates build-time static generation errors for authenticated routes, adheres strictly to documented Next.js 16 App Router conventions, and ensures that merchant and customer personalized data is never served stale from edge caches.
 
 ---
 

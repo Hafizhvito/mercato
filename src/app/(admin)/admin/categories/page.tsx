@@ -1,13 +1,13 @@
-import { FolderTree } from "lucide-react";
+import { FolderTree, Trash2 } from "lucide-react";
 import { headers } from "next/headers";
 import { redirect } from "next/navigation";
 import { auth } from "@/lib/auth";
 import { db } from "@/lib/db";
 import * as schema from "@/lib/db/schema";
-import { createCategoryAction } from "@/modules/catalog/actions";
+import { createCategoryAction, deleteCategoryAction } from "@/modules/catalog/actions";
 import { catalogRepository } from "@/modules/catalog/repository";
 
-export const instant = false;
+export const dynamic = "force-dynamic";
 
 export default async function AdminCategoriesPage() {
   const reqHeaders = await headers();
@@ -38,6 +38,14 @@ export default async function AdminCategoriesPage() {
     }
   }
 
+  async function handleDeleteCategory(formData: FormData) {
+    "use server";
+    const id = formData.get("id") as string;
+    if (id) {
+      await deleteCategoryAction(id);
+    }
+  }
+
   return (
     <div className="space-y-6">
       <div className="flex items-center justify-between">
@@ -59,14 +67,14 @@ export default async function AdminCategoriesPage() {
                 htmlFor="cat-name"
                 className="block text-xs font-semibold text-zinc-700 uppercase tracking-wider mb-1"
               >
-                Category Name *
+                Category Name
               </label>
               <input
                 id="cat-name"
-                type="text"
                 name="name"
+                type="text"
                 required
-                placeholder="e.g. Pakaian Pria"
+                placeholder="e.g. Specialty Coffee"
                 className="w-full rounded-lg border border-zinc-200 px-3 py-2 text-sm text-zinc-900 focus:border-zinc-900 focus:outline-hidden"
               />
             </div>
@@ -120,6 +128,16 @@ export default async function AdminCategoriesPage() {
                       <p className="mt-1 text-xs text-zinc-500">{cat.description}</p>
                     )}
                   </div>
+                  <form action={handleDeleteCategory}>
+                    <input type="hidden" name="id" value={cat.id} />
+                    <button
+                      type="submit"
+                      className="rounded-lg p-2 text-zinc-400 hover:bg-red-50 hover:text-red-600 transition"
+                      title="Delete category"
+                    >
+                      <Trash2 className="h-4 w-4" />
+                    </button>
+                  </form>
                 </div>
               ))}
             </div>

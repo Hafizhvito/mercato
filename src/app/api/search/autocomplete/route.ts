@@ -5,7 +5,7 @@ import { db } from "@/lib/db";
 import * as schema from "@/lib/db/schema";
 import { searchService } from "@/lib/search";
 
-export const instant = false;
+export const dynamic = "force-dynamic";
 
 export async function GET(req: NextRequest) {
   try {

@@ -1,15 +1,14 @@
 import { AlertCircle, Package, Plus, Search } from "lucide-react";
 import { headers } from "next/headers";
-import Image from "next/image";
 import Link from "next/link";
 import { redirect } from "next/navigation";
 import { auth } from "@/lib/auth";
 import { db } from "@/lib/db";
 import * as schema from "@/lib/db/schema";
-import { createMoney, formatMoney } from "@/lib/money";
 import { catalogRepository } from "@/modules/catalog/repository";
+import { ProductTableWithBulkActions } from "./ProductTableWithBulkActions";
 
-export const instant = false;
+export const dynamic = "force-dynamic";
 
 interface ProductsPageProps {
   searchParams: Promise<{
@@ -164,117 +163,7 @@ export default async function AdminProductsPage({ searchParams }: ProductsPagePr
             </div>
           </div>
         ) : (
-          <div className="overflow-x-auto">
-            <table className="w-full text-left text-sm text-zinc-600">
-              <thead className="border-b border-zinc-200 bg-zinc-50/75 text-xs font-semibold uppercase tracking-wider text-zinc-500">
-                <tr>
-                  <th scope="col" className="px-6 py-3.5">
-                    Product
-                  </th>
-                  <th scope="col" className="px-6 py-3.5">
-                    Status
-                  </th>
-                  <th scope="col" className="px-6 py-3.5">
-                    Inventory
-                  </th>
-                  <th scope="col" className="px-6 py-3.5">
-                    Price Range
-                  </th>
-                  <th scope="col" className="px-6 py-3.5">
-                    Variants
-                  </th>
-                  <th scope="col" className="px-6 py-3.5 text-right">
-                    Actions
-                  </th>
-                </tr>
-              </thead>
-              <tbody className="divide-y divide-zinc-200">
-                {products.map((product) => {
-                  const minPrice =
-                    product.variants.length > 0
-                      ? Math.min(...product.variants.map((v) => v.price))
-                      : 0;
-                  const maxPrice =
-                    product.variants.length > 0
-                      ? Math.max(...product.variants.map((v) => v.price))
-                      : 0;
-                  const totalStock = product.variants.reduce((acc, v) => acc + v.stock, 0);
-                  const primaryImg = product.images[0]?.url;
-
-                  return (
-                    <tr key={product.id} className="hover:bg-zinc-50/50 transition">
-                      <td className="px-6 py-4">
-                        <div className="flex items-center gap-3">
-                          <div className="h-12 w-12 shrink-0 overflow-hidden rounded-lg border border-zinc-200 bg-zinc-100 flex items-center justify-center relative">
-                            {primaryImg ? (
-                              <Image
-                                src={primaryImg}
-                                alt={product.name}
-                                fill
-                                sizes="48px"
-                                className="object-cover"
-                              />
-                            ) : (
-                              <Package className="h-6 w-6 text-zinc-400" />
-                            )}
-                          </div>
-                          <div>
-                            <Link
-                              href={`/admin/products/${product.id}`}
-                              className="font-medium text-zinc-900 hover:underline"
-                            >
-                              {product.name}
-                            </Link>
-                            <p className="text-xs text-zinc-400">/{product.slug}</p>
-                          </div>
-                        </div>
-                      </td>
-                      <td className="px-6 py-4">
-                        <span
-                          className={`inline-flex items-center rounded-full px-2.5 py-0.5 text-xs font-medium capitalize ${
-                            product.status === "published"
-                              ? "bg-emerald-50 text-emerald-700 border border-emerald-200"
-                              : product.status === "draft"
-                                ? "bg-amber-50 text-amber-700 border border-amber-200"
-                                : "bg-zinc-100 text-zinc-700 border border-zinc-200"
-                          }`}
-                        >
-                          {product.status}
-                        </span>
-                      </td>
-                      <td className="px-6 py-4">
-                        <span
-                          className={`font-medium ${
-                            totalStock > 0 ? "text-zinc-900" : "text-rose-600"
-                          }`}
-                        >
-                          {totalStock > 0 ? `${totalStock} in stock` : "Out of stock"}
-                        </span>
-                      </td>
-                      <td className="px-6 py-4 text-zinc-900 font-medium">
-                        {minPrice === maxPrice
-                          ? formatMoney(createMoney(minPrice, "IDR"))
-                          : `${formatMoney(createMoney(minPrice, "IDR"))} - ${formatMoney(
-                              createMoney(maxPrice, "IDR"),
-                            )}`}
-                      </td>
-                      <td className="px-6 py-4 text-zinc-500">
-                        {product.variants.length} variant{product.variants.length === 1 ? "" : "s"}
-                      </td>
-                      <td className="px-6 py-4 text-right">
-                        <Link
-                          href={`/admin/products/${product.id}`}
-                          className="font-medium text-zinc-900 hover:text-zinc-600"
-                        >
-                          Edit
-                        </Link>
-                      </td>
-                    </tr>
-                  );
-                })}
-              </tbody>
-            </table>
-          </div>
+          <ProductTableWithBulkActions products={products} />
         )}
 
         {/* Pagination Bar */}
