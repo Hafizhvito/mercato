@@ -44,20 +44,42 @@ describe("Rate Limiter Unit Tests", () => {
     expect(mockRatelimit.limit).toHaveBeenCalledWith("remote-client-ip");
   });
 
-  it("createLimiter throws fatal error in production when Upstash credentials are dummy", () => {
-    expect(() => {
-      createLimiter(5, "1 m", 60_000, "ratelimit:test", {
-        nodeEnv: "production",
-        upstashUrl: "https://example-upstash.upstash.io",
-      });
-    }).toThrow(/Fatal: Production environment requires valid UPSTASH_REDIS_REST_URL/);
+  it("createLimiter throws fatal error in production runtime regardless of CI or SKIP_ENV_VALIDATION", () => {
+    // Save original process envs
+    const origSkip = process.env.SKIP_ENV_VALIDATION;
+    const origCI = process.env.CI;
+    process.env.SKIP_ENV_VALIDATION = "true";
+    process.env.CI = "true";
 
-    expect(() => {
-      createLimiter(5, "1 m", 60_000, "ratelimit:test", {
-        nodeEnv: "production",
-        upstashUrl: "",
-        upstashToken: "",
-      });
-    }).toThrow(/Fatal: Production environment requires valid UPSTASH_REDIS_REST_URL/);
+    try {
+      expect(() => {
+        createLimiter(5, "1 m", 60_000, "ratelimit:test", {
+          nodeEnv: "production",
+          upstashUrl: "https://example-upstash.upstash.io",
+        });
+      }).toThrow(/Fatal: Production environment requires valid UPSTASH_REDIS_REST_URL/);
+
+      expect(() => {
+        createLimiter(5, "1 m", 60_000, "ratelimit:test", {
+          nodeEnv: "production",
+          upstashUrl: "",
+          upstashToken: "",
+        });
+      }).toThrow(/Fatal: Production environment requires valid UPSTASH_REDIS_REST_URL/);
+    } finally {
+      process.env.SKIP_ENV_VALIDATION = origSkip;
+      process.env.CI = origCI;
+    }
+  });
+
+  it("createLimiter allows fallback during Next.js production build phase", () => {
+    const limiter = createLimiter(5, "1 m", 60_000, "ratelimit:test", {
+      nodeEnv: "production",
+      nextPhase: "phase-production-build",
+      upstashUrl: "https://example-upstash.upstash.io",
+      upstashToken: "dummy",
+    });
+
+    expect(limiter).toBeInstanceOf(MemoryRateLimiter);
   });
 });
