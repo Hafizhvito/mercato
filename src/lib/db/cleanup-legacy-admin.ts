@@ -2,42 +2,26 @@ import { eq } from "drizzle-orm";
 import { db } from "@/lib/db";
 import * as schema from "@/lib/db/schema";
 import { env } from "@/lib/env";
+import { assertSafeTarget } from "./script-safety";
 
 const TARGET_LEGACY_EMAIL = "admin@mercato.local";
 
 async function main() {
   console.log("Starting Mercato Legacy Admin Account Cleanup Utility...");
 
-  // 1. Guard against running in production
-  if (process.env.NODE_ENV === "production") {
-    console.error(
-      "Security Violation: Cleanup script cannot be executed in production environments.",
-    );
-    process.exit(1);
-  }
+  // Safety & Target Confirmation Guard
+  const safety = assertSafeTarget({
+    targetUrl: env.DATABASE_URL,
+    scriptName: "db:cleanup-legacy-admin",
+  });
 
-  // 2. Guard against production database URL indicators
-  const dbUrl = env.DATABASE_URL.toLowerCase();
-  if (dbUrl.includes("production") || dbUrl.includes("-prod") || dbUrl.includes("prod-")) {
-    console.error(
-      "Security Violation: Target database indicates production environment. Aborting.",
-    );
-    process.exit(1);
-  }
-
-  // 3. Require explicit confirmation flag
-  const args = process.argv.slice(2);
-  const hasConfirmArg = args.includes("--confirm");
-  const hasConfirmEnv = process.env.CONFIRM_CLEANUP === "true";
-
-  if (!hasConfirmArg && !hasConfirmEnv) {
+  if (!safety.confirmed) {
     console.error(
       "\nConfirmation Required:\n" +
         `This utility permanently purges the legacy demo account '${TARGET_LEGACY_EMAIL}'.\n` +
+        `Target Database: ${safety.maskedTarget}\n` +
         "You must supply the explicit confirmation flag:\n" +
-        "  pnpm db:cleanup-legacy-admin --confirm\n" +
-        "or\n" +
-        "  CONFIRM_CLEANUP=true pnpm db:cleanup-legacy-admin\n",
+        `  pnpm db:cleanup-legacy-admin --confirm-target=${safety.maskedTarget}\n`,
     );
     process.exit(1);
   }

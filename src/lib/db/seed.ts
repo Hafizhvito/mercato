@@ -4,14 +4,24 @@ import { and, eq } from "drizzle-orm";
 import { auth } from "@/lib/auth";
 import { db } from "@/lib/db";
 import * as schema from "@/lib/db/schema";
+import { env } from "@/lib/env";
+import { assertSafeTarget } from "./script-safety";
 
 async function main() {
   console.log("Starting Mercato database seed process...");
 
-  if (process.env.NODE_ENV === "production" && process.env.ALLOW_PRODUCTION_SEED !== "true") {
+  // Safety & Target Confirmation Guard
+  const safety = assertSafeTarget({
+    targetUrl: env.DATABASE_URL,
+    scriptName: "db:seed",
+  });
+
+  if (!safety.confirmed) {
     console.error(
-      "\nSecurity Violation: Seeding is strictly prohibited in production environments.\n" +
-        "To override for disaster recovery, set ALLOW_PRODUCTION_SEED=true explicitly.\n",
+      "\nConfirmation Required:\n" +
+        `This script modifies database contents on: ${safety.maskedTarget}\n` +
+        "You must supply the explicit target confirmation flag:\n" +
+        `  pnpm db:seed --confirm-target=${safety.maskedTarget}\n`,
     );
     process.exit(1);
   }

@@ -2,14 +2,9 @@ import { eq, like, or } from "drizzle-orm";
 import { drizzle } from "drizzle-orm/node-postgres";
 import { Pool } from "pg";
 import * as schema from "@/lib/db/schema";
+import { assertSafeTarget } from "./script-safety";
 
 const isTestTarget = process.argv.includes("--test");
-const isConfirmed = process.argv.includes("--confirm") || process.env.CONFIRM_REWRITE === "true";
-
-function maskHost(host: string): string {
-  if (host.length <= 8) return "***";
-  return `${host.slice(0, 4)}***${host.slice(-4)}`;
-}
 
 async function main() {
   const rawTargetUrl = isTestTarget ? process.env.TEST_DATABASE_URL : process.env.DATABASE_URL;
@@ -21,37 +16,21 @@ async function main() {
     process.exit(1);
   }
 
-  // 1. Production Safety Guard
-  try {
-    const parsed = new URL(rawTargetUrl);
-    const host = parsed.hostname.toLowerCase();
-    const dbName = parsed.pathname.toLowerCase();
+  // 1. Production & Target Safety Guard
+  const safety = assertSafeTarget({
+    targetUrl: rawTargetUrl,
+    scriptName: "db:rewrite-legacy-images",
+  });
 
-    if (
-      process.env.NODE_ENV === "production" ||
-      host.includes("production") ||
-      host.includes("-prod") ||
-      dbName.includes("prod")
-    ) {
-      console.error(
-        "\nSecurity Violation: Refusing to run image rewrite against production database branch.\n",
-      );
-      process.exit(1);
-    }
+  const isConfirmed = safety.confirmed;
 
-    console.log("==================================================");
-    console.log("Mercato Legacy Image URL Rewrite Tool");
-    console.log(
-      `Target: ${isTestTarget ? "TEST" : "DEV"} Database (${maskHost(host)}${parsed.pathname})`,
-    );
-    console.log(
-      `Mode: ${isConfirmed ? "APPLY CHANGES (--confirm)" : "DRY RUN (pass --confirm to apply)"}`,
-    );
-    console.log("==================================================\n");
-  } catch {
-    console.error("Error parsing database connection string.");
-    process.exit(1);
-  }
+  console.log("==================================================");
+  console.log("Mercato Legacy Image URL Rewrite Tool");
+  console.log(`Target: ${isTestTarget ? "TEST" : "DEV"} Database (${safety.maskedTarget})`);
+  console.log(
+    `Mode: ${isConfirmed ? "APPLY CHANGES" : `DRY RUN (pass --confirm-target=${safety.maskedTarget} to apply)`}`,
+  );
+  console.log("==================================================\n");
 
   // Normalize sslmode
   const connectionString = rawTargetUrl.replace(

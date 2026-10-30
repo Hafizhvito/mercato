@@ -51,8 +51,14 @@ describe("Item 12: Seeded Catalog & Collection Assets Verification", () => {
     expect(fs.existsSync(scriptPath)).toBe(true);
 
     const scriptContent = fs.readFileSync(scriptPath, "utf-8");
-    expect(scriptContent).toContain("--confirm");
-    expect(scriptContent).toContain("production");
-    expect(scriptContent).toContain("maskHost");
+    expect(scriptContent).toContain("assertSafeTarget");
+    expect(scriptContent).toContain("script-safety");
+
+    const safetyHelperPath = path.resolve(process.cwd(), "src/lib/db/script-safety.ts");
+    expect(fs.existsSync(safetyHelperPath)).toBe(true);
+    const safetyContent = fs.readFileSync(safetyHelperPath, "utf-8");
+    expect(safetyContent).toContain("production");
+    expect(safetyContent).toContain("maskHost");
+    expect(safetyContent).toContain("--confirm-target");
   });
 });
