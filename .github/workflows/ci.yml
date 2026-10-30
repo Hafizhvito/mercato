@@ -67,8 +67,11 @@ jobs:
       - name: Typecheck
         run: pnpm typecheck
 
-      - name: Apply migrations to test database
-        run: pnpm db:migrate:test
+      - name: Initialize CI databases and apply migrations
+        run: |
+          node -e "const { Client } = require('pg'); const c = new Client('postgresql://postgres:postgres_ci_password@localhost:5432/postgres'); c.connect().then(() => c.query('CREATE DATABASE mercato_ci_dev;')).catch(e => console.log(e.message)).finally(() => c.end());"
+          pnpm db:migrate
+          pnpm db:migrate:test
 
       - name: Run unit and integration tests
         run: pnpm test -- --reporter=verbose
