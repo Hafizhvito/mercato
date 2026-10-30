@@ -1,8 +1,8 @@
 import crypto from "node:crypto";
-import { eq } from "drizzle-orm";
+import { and, eq } from "drizzle-orm";
 import { HttpResponse, http } from "msw";
 import { setupServer } from "msw/node";
-import { afterAll, afterEach, beforeAll, describe, expect, it } from "vitest";
+import { afterAll, afterEach, beforeAll, describe, expect, it, vi } from "vitest";
 import { db } from "@/lib/db";
 import * as schema from "@/lib/db/schema";
 import { catalogService } from "@/modules/catalog/service";
@@ -404,18 +404,100 @@ describe("Phase 4 Payments, Webhooks, Integrity, & Refunds Suite", () => {
     const resB = await paymentService.handleWebhook("midtrans", payloadB, {});
     expect(resB.status).toBe("processed");
 
-    // Check that order is marked refunded and refund record created
-    const refundedOrder = await orderService.getOrderById(orderB!.id, storeId);
-    expect(refundedOrder?.paymentStatus).toBe("refunded");
+    // By default: order is marked needs_review, no automated provider refund is called
+    const reviewedOrder = await orderService.getOrderById(orderB!.id, storeId);
+    expect(reviewedOrder?.paymentStatus).toBe("needs_review");
 
-    const [refundRecord] = await db
+    const noAutoRefund = await db
       .select()
       .from(schema.refunds)
-      .where(eq(schema.refunds.orderId, orderB!.id))
-      .limit(1);
+      .where(eq(schema.refunds.orderId, orderB!.id));
+    expect(noAutoRefund.length).toBe(0);
 
-    expect(refundRecord).toBeDefined();
-    expect(refundRecord?.reason).toContain("stock exhausted");
+    // Verify audit log entry was created for manual merchant review
+    const [auditEntry] = await db
+      .select()
+      .from(schema.auditLogs)
+      .where(
+        and(
+          eq(schema.auditLogs.entityId, orderB!.id),
+          eq(schema.auditLogs.action, "order.late_payment_flagged_for_review"),
+        ),
+      );
+    expect(auditEntry).toBeDefined();
+    const parsedDetails = JSON.parse(auditEntry!.details as string);
+    expect(parsedDetails.reason).toContain("stock exhausted. Awaiting merchant manual review.");
+
+    // C) Explicit setting test: when AUTO_REFUND_ON_STOCK_EXHAUSTED="true", provider refund IS called
+    const origAutoRefund = process.env.AUTO_REFUND_ON_STOCK_EXHAUSTED;
+    process.env.AUTO_REFUND_ON_STOCK_EXHAUSTED = "true";
+
+    try {
+      const [orderC] = await db
+        .insert(schema.orders)
+        .values({
+          orderNumber: `ORD-ZERO-AUTO-${Date.now()}`,
+          storeId,
+          guestEmail: "late-c@example.com",
+          status: "cancelled",
+          currency: "IDR",
+          subtotal: 200000,
+          shippingAmount: 10000,
+          totalAmount: 210000,
+          shippingCarrier: "JNE",
+          shippingService: "REG",
+          shippingAddress: mockAddress,
+          guestAccessToken: "token-late-c",
+          paymentProvider: "midtrans",
+          idempotencyKey: `idem-late-c-${Date.now()}`,
+          checkoutSessionId: `cs-late-c-${Date.now()}`,
+        })
+        .returning();
+
+      await db.insert(schema.orderItems).values({
+        orderId: orderC!.id,
+        productId: zeroStockProduct.id,
+        variantId: zeroVariantId,
+        productName: zeroStockProduct.name,
+        variantTitle: "Standard",
+        sku: "RARE-1",
+        unitPrice: 200000,
+        quantity: 1,
+        totalPrice: 200000,
+      });
+
+      const grossAmountC = `${orderC!.totalAmount}.00`;
+      const sigC = crypto
+        .createHash("sha512")
+        .update(`${orderC!.orderNumber}200${grossAmountC}${serverKey}`)
+        .digest("hex");
+
+      const payloadC = {
+        order_id: orderC!.orderNumber,
+        status_code: "200",
+        gross_amount: grossAmountC,
+        signature_key: sigC,
+        transaction_status: "settlement",
+        transaction_id: `tx-late-c-${Date.now()}`,
+      };
+
+      const resC = await paymentService.handleWebhook("midtrans", payloadC, {});
+      expect(resC.status).toBe("processed");
+
+      const autoRefundedOrder = await orderService.getOrderById(orderC!.id, storeId);
+      expect(autoRefundedOrder?.paymentStatus).toBe("refunded");
+
+      const [refundRecord] = await db
+        .select()
+        .from(schema.refunds)
+        .where(eq(schema.refunds.orderId, orderC!.id))
+        .limit(1);
+
+      expect(refundRecord).toBeDefined();
+      expect(refundRecord?.reason).toContain("stock exhausted");
+    } finally {
+      process.env.AUTO_REFUND_ON_STOCK_EXHAUSTED = origAutoRefund;
+    }
   });
 
   it("7. Admin Refund Flow: processes provider refund, creates audit log, and optionally restocks inventory", async () => {
@@ -501,5 +583,51 @@ describe("Phase 4 Payments, Webhooks, Integrity, & Refunds Suite", () => {
 
     expect(auditEntry).toBeDefined();
     expect(auditEntry?.action).toBe("orders.refund");
+  });
+
+  it("8. Payment Status Sync: applies status through the exact same transition path as webhooks", async () => {
+    // Create an order awaiting payment
+    const { order } = await orderService.createOrder({
+      storeId,
+      customerId: null,
+      guestEmail: "sync@example.com",
+      idempotencyKey: `sync-order-${Date.now()}`,
+      checkoutSessionId: `cs-sync-${Date.now()}`,
+      items: [{ productId: testProductId, variantId: testVariantId, quantity: 1 }],
+      shippingAddress: mockAddress,
+      shippingCarrier: "JNE",
+      shippingService: "REG",
+      shippingAmountMinor: 10000,
+    });
+
+    // Update payment provider to midtrans
+    await db
+      .update(schema.orders)
+      .set({ paymentProvider: "midtrans" })
+      .where(eq(schema.orders.id, order.id));
+
+    // Mock getPaymentStatus on midtrans provider
+    const midtransProvider = paymentService.getProvider("midtrans");
+    const origGetPaymentStatus = midtransProvider.getPaymentStatus;
+    midtransProvider.getPaymentStatus = vi.fn().mockResolvedValue({
+      status: "paid",
+      amountMinor: order.totalAmount,
+      currency: order.currency,
+      paymentTransactionId: `sync-tx-${Date.now()}`,
+      settledAt: new Date(),
+    });
+
+    try {
+      const syncedOrder = await paymentService.syncOrderStatus(order.id, storeId);
+      expect(syncedOrder.status).toBe("paid");
+      expect(syncedOrder.paymentStatus).toBe("paid");
+      expect(syncedOrder.paymentTransactionId).toContain("sync-tx-");
+
+      // Verify order status history was recorded
+      const history = await orderService.getOrderStatusHistory(order.id);
+      expect(history.some((h) => h.toStatus === "paid")).toBe(true);
+    } finally {
+      midtransProvider.getPaymentStatus = origGetPaymentStatus;
+    }
   });
 });

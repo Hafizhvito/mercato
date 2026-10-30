@@ -197,10 +197,12 @@ This document records the architectural and engineering decisions made for the M
 
 ## ADR 0022: Midtrans Snap Integration and Late Payment Policy
 
-* **Status:** Accepted
+* **Status:** Accepted (Updated)
 * **Context:** The Indonesian commerce ecosystem relies heavily on QRIS, e-Wallets (GoPay, ShopeePay), and bank Virtual Accounts (BCA, Mandiri, BNI, BRI). Midtrans Snap provides an omnichannel redirect/modal solution. However, asynchronous payment rails (Virtual Accounts and convenience stores) frequently suffer from "late payments"—a customer transfers funds after the 15-minute checkout reservation TTL has expired and the order status has automatically transitioned to `cancelled`.
-* **Decision:** Integrate Midtrans Snap via server-to-server transaction tokens and SHA-512 signature hashing (`SHA-512(order_id + status_code + gross_amount + server_key)`). Establish a deterministic, automated late payment policy executed inside interactive database transactions:
-  1. When a valid `settlement` webhook arrives for an order in `cancelled` status, the system checks whether inventory for all line items is still available.
+* **Decision:** Integrate Midtrans Snap via server-to-server transaction tokens and SHA-512 signature hashing (`SHA-512(order_id + status_code + gross_amount + server_key)`). Establish a deterministic late payment policy executed inside interactive database transactions:
+  1. When a valid `settlement` webhook or status sync arrives for an order in `cancelled` status, the system checks whether inventory for all line items is still available.
   2. If stock is available: the system re-reserves and commits the inventory, revives the order status directly from `cancelled` to `paid`, and dispatches a payment confirmation email.
-  3. If stock has been exhausted by another customer: the system automatically triggers an immediate refund call via the Midtrans API (`/v2/:order_id/refund`), records a `refunds` entry, logs an audit entry, and maintains the order in `refunded` state.
-* **Consequences:** Maximizes revenue retention from delayed payments without risking overselling or manual customer support intervention, providing an automated, fair resolution for edge-case payment races.
+  3. If stock has been exhausted by another customer:
+     - **Default Policy (Manual Review):** The system marks `paymentStatus = "needs_review"`, records an audit log (`order.late_payment_flagged_for_review`), appends to order status history, and neutrally notifies the customer that their payment was received but the order is on hold for merchant review. The gateway refund is **not** called automatically. A visible `Needs Review` badge and audit trail appear in the merchant admin order console (`/admin/orders`), allowing the merchant to choose between manual fulfillment or issuing a refund.
+     - **Opt-in Automatic Refund:** Automatic provider refund is strictly guarded behind an explicit environment setting `AUTO_REFUND_ON_STOCK_EXHAUSTED=true` (off by default). When enabled, the system automatically triggers a refund call via `/v2/:order_id/refund`, records a `refunds` entry, and sets `paymentStatus = "refunded"`.
+* **Consequences:** Protects merchant operational control and funds by preventing automated gateway fee loss on disputed or replenishable inventory, while maintaining complete auditability and neutral customer transparency.

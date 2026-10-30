@@ -37,7 +37,18 @@ export class MidtransPaymentProvider implements PaymentProvider {
   }
 
   isAvailable(): boolean {
-    return Boolean(this.serverKey && this.serverKey.trim().length > 0);
+    const key = this.serverKey.trim();
+    if (!key || key.length < 10) return false;
+    // Strictly treat sample/placeholder keys from .env.example as unconfigured
+    if (
+      key === "SB-Mid-server-sample_server_key" ||
+      key.includes("sample_server_key") ||
+      key.includes("dummy") ||
+      key.includes("example")
+    ) {
+      return false;
+    }
+    return true;
   }
 
   async createPaymentSession(order: Order, items: OrderItem[]): Promise<PaymentSessionResult> {

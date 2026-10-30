@@ -11,6 +11,7 @@ import { db } from "@/lib/db";
 import * as schema from "@/lib/db/schema";
 import { createMoney, formatMoney } from "@/lib/money";
 import { orderService } from "@/modules/orders/service";
+import { paymentService } from "@/modules/payments/service";
 
 interface Props {
   params: Promise<{
@@ -65,26 +66,32 @@ export default async function OrderConfirmationPage({ params, searchParams }: Pr
   const t = await getTranslations({ locale, namespace: "order" });
 
   const statusLabel =
-    order.status === "awaiting_payment"
-      ? t("statusAwaitingPayment")
-      : order.status === "paid"
-        ? t("statusPaid")
-        : order.status === "processing"
-          ? t("statusProcessing")
-          : order.status === "shipped"
-            ? t("statusShipped")
-            : order.status === "delivered"
-              ? t("statusDelivered")
-              : order.status === "cancelled"
-                ? t("statusCancelled")
-                : order.status === "refunded"
-                  ? t("statusRefunded")
-                  : t("statusPending");
+    order.paymentStatus === "needs_review"
+      ? locale === "id"
+        ? "Menunggu Peninjauan Manual"
+        : "Needs Manual Review"
+      : order.status === "awaiting_payment"
+        ? t("statusAwaitingPayment")
+        : order.status === "paid"
+          ? t("statusPaid")
+          : order.status === "processing"
+            ? t("statusProcessing")
+            : order.status === "shipped"
+              ? t("statusShipped")
+              : order.status === "delivered"
+                ? t("statusDelivered")
+                : order.status === "cancelled"
+                  ? t("statusCancelled")
+                  : order.status === "refunded"
+                    ? t("statusRefunded")
+                    : t("statusPending");
 
   const [items, history] = await Promise.all([
     orderService.getOrderItems(order.id),
     orderService.getOrderStatusHistory(order.id),
   ]);
+
+  const availableProviders = paymentService.getAvailableProviders();
 
   const formattedSubtotal = formatMoney(createMoney(order.subtotal, order.currency));
   const formattedShipping = formatMoney(createMoney(order.shippingAmount, order.currency));
@@ -172,12 +179,16 @@ export default async function OrderConfirmationPage({ params, searchParams }: Pr
 
             {/* Shipping Info Card */}
             <div className="space-y-6">
-              {order.status === "awaiting_payment" && (
+              {(order.status === "awaiting_payment" || order.paymentStatus === "needs_review") && (
                 <PaymentActionCard
                   orderId={order.id}
+                  orderNumber={order.orderNumber}
+                  token={token}
                   amountFormatted={formattedTotal}
                   locale={locale}
                   initialProvider={order.paymentProvider}
+                  availableProviders={availableProviders}
+                  paymentStatus={order.paymentStatus}
                 />
               )}
 

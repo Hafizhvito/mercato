@@ -1,6 +1,7 @@
 import * as React from "react";
 import { Resend } from "resend";
 import { logger } from "@/lib/logger";
+import { LatePaymentReviewEmail } from "./templates/LatePaymentReviewEmail";
 import { OrderConfirmationEmail } from "./templates/OrderConfirmationEmail";
 import { OrderShippedEmail } from "./templates/OrderShippedEmail";
 import { PasswordResetEmail } from "./templates/PasswordResetEmail";
@@ -40,6 +41,13 @@ export interface EmailService {
     totalAmountFormatted: string;
     paymentMethod: string;
     orderUrl?: string;
+  }): Promise<void>;
+  sendLatePaymentReviewEmail(options: {
+    to: string;
+    orderNumber: string;
+    totalAmountFormatted: string;
+    orderUrl?: string;
+    locale?: string;
   }): Promise<void>;
   sendOrderShippedEmail(options: {
     to: string;
@@ -133,6 +141,29 @@ export class ConsoleEmailService implements EmailService {
         `Order Number: ${options.orderNumber}\n` +
         `Amount: ${options.totalAmountFormatted}\n` +
         `Method: ${options.paymentMethod}\n` +
+        `Order URL: ${options.orderUrl ?? "N/A"}\n` +
+        "=======================================================\n",
+    );
+  }
+
+  async sendLatePaymentReviewEmail(options: {
+    to: string;
+    orderNumber: string;
+    totalAmountFormatted: string;
+    orderUrl?: string;
+    locale?: string;
+  }): Promise<void> {
+    logger.info(
+      { to: options.to, orderNumber: options.orderNumber },
+      "Development Email: Sending neutral late payment review notification",
+    );
+    console.log(
+      "\n=======================================================\n" +
+        "[MERCATO DEV EMAIL SERVICE - LATE PAYMENT MANUAL REVIEW]\n" +
+        `To: ${options.to}\n` +
+        `Order Number: ${options.orderNumber}\n` +
+        `Amount: ${options.totalAmountFormatted}\n` +
+        "Status: On hold for manual merchant review\n" +
         `Order URL: ${options.orderUrl ?? "N/A"}\n` +
         "=======================================================\n",
     );
@@ -289,6 +320,38 @@ export class ResendEmailService implements EmailService {
       logger.error(
         { err: error, to: options.to, orderNumber: options.orderNumber },
         "Resend: Failed to send payment received email",
+      );
+      throw error;
+    }
+  }
+
+  async sendLatePaymentReviewEmail(options: {
+    to: string;
+    orderNumber: string;
+    totalAmountFormatted: string;
+    orderUrl?: string;
+    locale?: string;
+  }): Promise<void> {
+    try {
+      await this.resend.emails.send({
+        from: this.from,
+        to: options.to,
+        subject: `Payment Status Notice for Order #${options.orderNumber} - Mercato`,
+        react: React.createElement(LatePaymentReviewEmail, {
+          orderNumber: options.orderNumber,
+          totalAmountFormatted: options.totalAmountFormatted,
+          orderUrl: options.orderUrl,
+          locale: options.locale ?? "id",
+        }),
+      });
+      logger.info(
+        { to: options.to, orderNumber: options.orderNumber },
+        "Resend: Late payment review notice email dispatched",
+      );
+    } catch (error) {
+      logger.error(
+        { err: error, to: options.to, orderNumber: options.orderNumber },
+        "Resend: Failed to send late payment review email",
       );
       throw error;
     }

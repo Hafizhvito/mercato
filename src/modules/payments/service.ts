@@ -8,7 +8,13 @@ import type { Order, OrderItem, OrderStatus } from "@/modules/orders/schema";
 import { orderService } from "@/modules/orders/service";
 import { midtransPaymentProvider } from "./providers/midtrans";
 import { stripePaymentProvider } from "./providers/stripe";
-import type { PaymentProvider, PaymentSessionResult, RefundResult } from "./types";
+import type {
+  PaymentProvider,
+  PaymentSessionResult,
+  PaymentStatusResult,
+  RefundResult,
+  WebhookVerificationResult,
+} from "./types";
 
 export class PaymentService {
   private providers: Record<string, PaymentProvider> = {
@@ -39,6 +45,13 @@ export class PaymentService {
     ];
   }
 
+  getAvailableProviders(): ("midtrans" | "stripe")[] {
+    const list: ("midtrans" | "stripe")[] = [];
+    if (midtransPaymentProvider.isAvailable()) list.push("midtrans");
+    if (stripePaymentProvider.isAvailable()) list.push("stripe");
+    return list;
+  }
+
   async createSession(
     orderId: string,
     providerName: "midtrans" | "stripe",
@@ -50,8 +63,14 @@ export class PaymentService {
       .limit(1);
     if (!order) throw new Error("Order not found");
 
-    const items = await orderService.getOrderItems(order.id);
     const provider = this.getProvider(providerName);
+    if (!provider.isAvailable()) {
+      throw new Error(
+        `Payment provider '${providerName}' is not configured or disabled. Please choose another payment method.`,
+      );
+    }
+
+    const items = await orderService.getOrderItems(order.id);
 
     const sessionResult = await provider.createPaymentSession(order, items);
 
@@ -149,7 +168,32 @@ export class PaymentService {
       }
     }
 
-    // 4. Process State Machine Transition inside interactive Transaction
+    // 4. Process State Machine Transition through shared transition path
+    await this.applyPaymentTransition({ order, verification, providerName });
+
+    // Mark webhook event processed
+    await db
+      .update(schema.webhookEvents)
+      .set({
+        status: "processed",
+        processedAt: new Date(),
+      })
+      .where(eq(schema.webhookEvents.providerEventId, verification.providerEventId));
+
+    return { status: "processed" };
+  }
+
+  /**
+   * Shared, idempotent state transition logic for both webhooks and live status sync.
+   */
+  async applyPaymentTransition(params: {
+    order: Order;
+    verification: WebhookVerificationResult | PaymentStatusResult;
+    providerName: "midtrans" | "stripe";
+  }): Promise<void> {
+    const { order, verification, providerName } = params;
+    const provider = this.getProvider(providerName);
+
     await db.transaction(async (tx) => {
       let stockAvailable = true;
 
@@ -193,38 +237,84 @@ export class PaymentService {
               })
               .where(eq(schema.orders.id, order.id));
           } else {
-            // Stock is no longer available: trigger automatic refund
-            logger.warn(
-              { orderId: order.id, orderNumber: order.orderNumber },
-              "Late payment received but stock exhausted. Processing auto-refund.",
-            );
-            try {
-              const refundRes = await provider.processRefund({
-                order,
-                amountMinor: verification.amountMinor,
-                reason: "Late payment auto-refund (stock exhausted)",
-              });
-              await tx.insert(schema.refunds).values({
-                orderId: order.id,
-                providerRefundId: refundRes.providerRefundId ?? null,
-                amount: verification.amountMinor,
-                currency: order.currency,
-                reason: "Late payment auto-refund (stock exhausted)",
-                restocked: false,
-                status: "completed",
-              });
+            // Stock is no longer available when late payment arrives
+            const autoRefundEnabled = process.env.AUTO_REFUND_ON_STOCK_EXHAUSTED === "true";
+
+            if (autoRefundEnabled) {
+              // Opt-in automatic refund path (disabled by default)
+              logger.warn(
+                { orderId: order.id, orderNumber: order.orderNumber },
+                "Late payment received but stock exhausted. Processing auto-refund (AUTO_REFUND_ON_STOCK_EXHAUSTED=true).",
+              );
+              try {
+                const refundRes = await provider.processRefund({
+                  order,
+                  amountMinor: verification.amountMinor,
+                  reason: "Late payment auto-refund (stock exhausted)",
+                });
+                await tx.insert(schema.refunds).values({
+                  orderId: order.id,
+                  providerRefundId: refundRes.providerRefundId ?? null,
+                  amount: verification.amountMinor,
+                  currency: order.currency,
+                  reason: "Late payment auto-refund (stock exhausted)",
+                  restocked: false,
+                  status: "completed",
+                });
+                await tx
+                  .update(schema.orders)
+                  .set({
+                    paymentStatus: "refunded",
+                    paymentTransactionId: verification.paymentTransactionId ?? null,
+                    updatedAt: new Date(),
+                  })
+                  .where(eq(schema.orders.id, order.id));
+              } catch (refundErr) {
+                logger.error(
+                  { err: refundErr, orderId: order.id },
+                  "Auto-refund failed for late payment",
+                );
+              }
+            } else {
+              // Default policy: Flag for manual review, do NOT call provider refund automatically, notify customer neutrally
+              logger.warn(
+                { orderId: order.id, orderNumber: order.orderNumber },
+                "Late payment received but stock exhausted. Flagging order for manual merchant review.",
+              );
+
               await tx
                 .update(schema.orders)
                 .set({
-                  paymentStatus: "refunded",
+                  paymentStatus: "needs_review",
+                  paymentTransactionId: verification.paymentTransactionId ?? null,
                   updatedAt: new Date(),
                 })
                 .where(eq(schema.orders.id, order.id));
-            } catch (refundErr) {
-              logger.error(
-                { err: refundErr, orderId: order.id },
-                "Auto-refund failed for late payment",
-              );
+
+              // Record in order status history
+              await tx.insert(schema.orderStatusHistory).values({
+                orderId: order.id,
+                fromStatus: order.status,
+                toStatus: order.status,
+                reason: `Late payment received via ${providerName} (TxID: ${verification.paymentTransactionId ?? "N/A"}), but stock is exhausted. Flagged for merchant manual review.`,
+              });
+
+              // Create audit log entry for admin visibility
+              await tx.insert(schema.auditLogs).values({
+                storeId: order.storeId,
+                userId: null,
+                action: "order.late_payment_flagged_for_review",
+                entityType: "order",
+                entityId: order.id,
+                details: JSON.stringify({
+                  orderNumber: order.orderNumber,
+                  amountMinor: verification.amountMinor,
+                  paymentTransactionId: verification.paymentTransactionId,
+                  provider: providerName,
+                  reason:
+                    "Late payment received after order cancellation; stock exhausted. Awaiting merchant manual review.",
+                }),
+              });
             }
           }
         } else if (order.status !== "paid") {
@@ -245,20 +335,18 @@ export class PaymentService {
             .where(eq(schema.orders.id, order.id));
         }
 
-        // Send payment received email if order is active/paid (not auto-refunded due to exhausted stock)
-        const isRevivedOrPaid = order.status !== "cancelled" || stockAvailable;
+        // Email notifications
         const customerEmail =
-          isRevivedOrPaid &&
-          (order.guestEmail ||
-            (order.customerId
-              ? (
-                  await db
-                    .select({ email: schema.user.email })
-                    .from(schema.user)
-                    .where(eq(schema.user.id, order.customerId))
-                    .limit(1)
-                )[0]?.email
-              : null));
+          order.guestEmail ||
+          (order.customerId
+            ? (
+                await db
+                  .select({ email: schema.user.email })
+                  .from(schema.user)
+                  .where(eq(schema.user.id, order.customerId))
+                  .limit(1)
+              )[0]?.email
+            : null);
 
         if (customerEmail) {
           const formattedTotal = new Intl.NumberFormat("id-ID", {
@@ -266,20 +354,37 @@ export class PaymentService {
             currency: order.currency,
           }).format(order.totalAmount);
 
-          await emailService
-            .sendPaymentReceivedEmail({
-              to: customerEmail,
-              orderNumber: order.orderNumber,
-              totalAmountFormatted: formattedTotal,
-              paymentMethod: providerName.toUpperCase(),
-              orderUrl: `${process.env.NEXT_PUBLIC_APP_URL || "http://localhost:3000"}/orders/${order.orderNumber}?token=${order.guestAccessToken}`,
-            })
-            .catch((err) => {
-              logger.error(
-                { err, orderNumber: order.orderNumber },
-                "Failed to send payment received email",
-              );
-            });
+          if (!stockAvailable && process.env.AUTO_REFUND_ON_STOCK_EXHAUSTED !== "true") {
+            // Neutral customer notice for late payment under manual review
+            await emailService
+              .sendLatePaymentReviewEmail({
+                to: customerEmail,
+                orderNumber: order.orderNumber,
+                totalAmountFormatted: formattedTotal,
+                orderUrl: `${process.env.NEXT_PUBLIC_APP_URL || "http://localhost:3000"}/orders/${order.orderNumber}?token=${order.guestAccessToken}`,
+              })
+              .catch((err) => {
+                logger.error(
+                  { err, orderNumber: order.orderNumber },
+                  "Failed to send late payment review email",
+                );
+              });
+          } else if (order.status !== "cancelled" || stockAvailable) {
+            await emailService
+              .sendPaymentReceivedEmail({
+                to: customerEmail,
+                orderNumber: order.orderNumber,
+                totalAmountFormatted: formattedTotal,
+                paymentMethod: providerName.toUpperCase(),
+                orderUrl: `${process.env.NEXT_PUBLIC_APP_URL || "http://localhost:3000"}/orders/${order.orderNumber}?token=${order.guestAccessToken}`,
+              })
+              .catch((err) => {
+                logger.error(
+                  { err, orderNumber: order.orderNumber },
+                  "Failed to send payment received email",
+                );
+              });
+          }
         }
       } else if (verification.status === "cancelled") {
         if (order.status === "awaiting_payment") {
@@ -312,18 +417,7 @@ export class PaymentService {
             .where(eq(schema.orders.id, order.id));
         }
       }
-
-      // Mark webhook event processed
-      await tx
-        .update(schema.webhookEvents)
-        .set({
-          status: "processed",
-          processedAt: new Date(),
-        })
-        .where(eq(schema.webhookEvents.providerEventId, verification.providerEventId));
     });
-
-    return { status: "processed" };
   }
 
   async syncOrderStatus(orderId: string, storeId: string): Promise<Order> {
@@ -337,14 +431,15 @@ export class PaymentService {
     const provider = this.getProvider(order.paymentProvider as "midtrans" | "stripe");
     const statusResult = await provider.getPaymentStatus(order.orderNumber);
 
-    if (statusResult.status !== order.status) {
-      return orderService.transitionOrderStatus(order.id, storeId, statusResult.status, {
-        reason: `Payment status synced from ${order.paymentProvider}`,
-        actorId: "system_sync",
-      });
-    }
+    // Apply result through the same idempotent transition path as webhooks
+    await this.applyPaymentTransition({
+      order,
+      verification: statusResult,
+      providerName: order.paymentProvider as "midtrans" | "stripe",
+    });
 
-    return order;
+    const updatedOrder = await orderService.getOrderById(orderId, storeId);
+    return updatedOrder ?? order;
   }
 
   async refundOrder(params: {

@@ -35,7 +35,18 @@ export class StripePaymentProvider implements PaymentProvider {
   }
 
   isAvailable(): boolean {
-    return Boolean(this.secretKey && this.secretKey.trim().length > 0);
+    const key = this.secretKey.trim();
+    if (!key || key.length < 15) return false;
+    // Strictly treat sample/placeholder keys from .env.example as unconfigured
+    if (
+      key === "sk_test_sample_stripe_secret_key" ||
+      key.includes("sample_stripe") ||
+      key.includes("dummy") ||
+      key.includes("example")
+    ) {
+      return false;
+    }
+    return key.startsWith("sk_test_") || key.startsWith("sk_live_") || key.startsWith("rk_");
   }
 
   /**
