@@ -1,6 +1,6 @@
 "use client";
 
-import { ShoppingBag } from "lucide-react";
+import { ShoppingBag, User } from "lucide-react";
 import Link from "next/link";
 import { useTranslations } from "next-intl";
 import { SearchBar } from "./SearchBar";
@@ -50,6 +50,13 @@ export function StorefrontHeader({ locale = "id" }: StorefrontHeaderProps) {
           >
             <ShoppingBag className="h-3.5 w-3.5" />
             <span>{tCommon("cart")}</span>
+          </Link>
+          <Link
+            href={`/${locale}/account`}
+            className="flex items-center gap-1.5 rounded-lg border border-zinc-200 bg-white px-3 py-1.5 text-xs font-semibold text-zinc-900 hover:bg-zinc-50"
+          >
+            <User className="h-3.5 w-3.5" />
+            <span>{tCommon("account")}</span>
           </Link>
           <Link
             href={locale === "id" ? "/en" : "/id"}
