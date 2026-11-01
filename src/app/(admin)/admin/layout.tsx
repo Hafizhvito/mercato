@@ -2,6 +2,7 @@ import { headers } from "next/headers";
 import Link from "next/link";
 import { redirect } from "next/navigation";
 import { auth } from "@/lib/auth";
+import { hasPermission } from "@/server/guards";
 
 export const instant = false;
 
@@ -71,24 +72,30 @@ export default async function AdminLayout({ children }: { children: React.ReactN
             >
               Pelanggan
             </Link>
-            <Link
-              href="/admin/discounts"
-              className="flex items-center gap-3 rounded-md px-3 py-2 text-zinc-600 hover:bg-zinc-50 hover:text-zinc-900"
-            >
-              Diskon
-            </Link>
-            <Link
-              href="/admin/analytics"
-              className="flex items-center gap-3 rounded-md px-3 py-2 text-zinc-600 hover:bg-zinc-50 hover:text-zinc-900"
-            >
-              Analitik
-            </Link>
-            <Link
-              href="/admin/settings"
-              className="flex items-center gap-3 rounded-md px-3 py-2 text-zinc-600 hover:bg-zinc-50 hover:text-zinc-900"
-            >
-              Pengaturan
-            </Link>
+            {hasPermission(role, "discounts:view") && (
+              <Link
+                href="/admin/discounts"
+                className="flex items-center gap-3 rounded-md px-3 py-2 text-zinc-600 hover:bg-zinc-50 hover:text-zinc-900"
+              >
+                Diskon
+              </Link>
+            )}
+            {hasPermission(role, "settings:view") && (
+              <Link
+                href="/admin/settings"
+                className="flex items-center gap-3 rounded-md px-3 py-2 text-zinc-600 hover:bg-zinc-50 hover:text-zinc-900"
+              >
+                Pengaturan
+              </Link>
+            )}
+            {hasPermission(role, "audit_log:view") && (
+              <Link
+                href="/admin/audit-log"
+                className="flex items-center gap-3 rounded-md px-3 py-2 text-zinc-600 hover:bg-zinc-50 hover:text-zinc-900"
+              >
+                Audit Log
+              </Link>
+            )}
           </nav>
         </div>
 
