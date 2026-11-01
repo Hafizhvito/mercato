@@ -23,6 +23,7 @@
     "db:import-regions": "tsx --env-file=.env.local src/lib/shipping/import-indonesian-regions.ts",
     "db:cleanup-legacy-admin": "tsx --env-file=.env.local src/lib/db/cleanup-legacy-admin.ts",
     "db:rewrite-legacy-images": "tsx --env-file=.env.local src/lib/db/rewrite-legacy-images.ts",
+    "db:seed-analytics-orders": "tsx --env-file=.env.local src/lib/db/seed-analytics-orders.ts",
     "db:studio": "drizzle-kit studio",
     "prepare": "husky"
   },
