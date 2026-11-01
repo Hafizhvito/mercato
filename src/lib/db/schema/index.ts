@@ -1,4 +1,14 @@
-import { boolean, integer, pgTable, text, timestamp, uuid, varchar } from "drizzle-orm/pg-core";
+import {
+  boolean,
+  index,
+  integer,
+  jsonb,
+  pgTable,
+  text,
+  timestamp,
+  uuid,
+  varchar,
+} from "drizzle-orm/pg-core";
 
 // 1. Stores (Multi-tenant foundation)
 export const stores = pgTable("stores", {
@@ -8,6 +18,13 @@ export const stores = pgTable("stores", {
   currency: varchar("currency", { length: 3 }).notNull().default("IDR"),
   locale: varchar("locale", { length: 5 }).notNull().default("id"),
   description: text("description"),
+  contactEmail: varchar("contact_email", { length: 255 }),
+  contactPhone: varchar("contact_phone", { length: 50 }),
+  address: text("address"),
+  lowStockThreshold: integer("low_stock_threshold").default(5).notNull(),
+  taxRatePercent: integer("tax_rate_percent").default(0).notNull(),
+  taxInclusive: boolean("tax_inclusive").default(false).notNull(),
+  shippingFlatRates: jsonb("shipping_flat_rates"),
   createdAt: timestamp("created_at", { withTimezone: true }).defaultNow().notNull(),
   updatedAt: timestamp("updated_at", { withTimezone: true }).defaultNow().notNull(),
 });
@@ -106,6 +123,28 @@ export const auditLogs = pgTable("audit_logs", {
   createdAt: timestamp("created_at", { withTimezone: true }).defaultNow().notNull(),
 });
 
+// 8. Customer Saved Addresses (Storefront Address Book)
+export const customerAddresses = pgTable(
+  "customer_addresses",
+  {
+    id: uuid("id").defaultRandom().primaryKey(),
+    customerId: text("customer_id")
+      .notNull()
+      .references(() => user.id, { onDelete: "cascade" }),
+    recipientName: varchar("recipient_name", { length: 255 }).notNull(),
+    phone: varchar("phone", { length: 50 }).notNull(),
+    street: text("street").notNull(),
+    province: varchar("province", { length: 100 }).notNull(),
+    city: varchar("city", { length: 100 }).notNull(),
+    district: varchar("district", { length: 100 }).notNull(),
+    postalCode: varchar("postal_code", { length: 10 }).notNull(),
+    isDefault: boolean("is_default").default(false).notNull(),
+    createdAt: timestamp("created_at", { withTimezone: true }).defaultNow().notNull(),
+    updatedAt: timestamp("updated_at", { withTimezone: true }).defaultNow().notNull(),
+  },
+  (table) => [index("customer_addresses_customer_idx").on(table.customerId)],
+);
+
 // Type inferences
 export type Store = typeof stores.$inferSelect;
 export type NewStore = typeof stores.$inferInsert;
@@ -116,6 +155,8 @@ export type Account = typeof account.$inferSelect;
 export type Verification = typeof verification.$inferSelect;
 export type TwoFactor = typeof twoFactor.$inferSelect;
 export type AuditLog = typeof auditLogs.$inferSelect;
+export type CustomerAddress = typeof customerAddresses.$inferSelect;
+export type NewCustomerAddress = typeof customerAddresses.$inferInsert;
 
 export * from "@/modules/cart/schema";
 // Domain Schemas

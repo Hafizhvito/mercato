@@ -56,6 +56,9 @@ export const orders = pgTable(
     discountId: uuid("discount_id").references(() => discounts.id, { onDelete: "set null" }),
     shippingCarrier: varchar("shipping_carrier", { length: 50 }).notNull(),
     shippingService: varchar("shipping_service", { length: 50 }).notNull(),
+    shippingTrackingNumber: varchar("shipping_tracking_number", { length: 100 }),
+    shippedAt: timestamp("shipped_at", { withTimezone: true }),
+    deliveredAt: timestamp("delivered_at", { withTimezone: true }),
     shippingAddress: jsonb("shipping_address").$type<ShippingAddress>().notNull(),
     billingAddress: jsonb("billing_address").$type<ShippingAddress>(),
     guestAccessToken: varchar("guest_access_token", { length: 128 }).notNull(),
@@ -102,8 +105,21 @@ export const orderStatusHistory = pgTable("order_status_history", {
   createdAt: timestamp("created_at", { withTimezone: true }).defaultNow().notNull(),
 });
 
+export const orderNotes = pgTable("order_notes", {
+  id: uuid("id").defaultRandom().primaryKey(),
+  orderId: uuid("order_id")
+    .notNull()
+    .references(() => orders.id, { onDelete: "cascade" }),
+  authorId: text("author_id").references(() => user.id, { onDelete: "set null" }),
+  authorName: varchar("author_name", { length: 255 }).notNull(),
+  note: text("note").notNull(),
+  createdAt: timestamp("created_at", { withTimezone: true }).defaultNow().notNull(),
+});
+
 export type Order = typeof orders.$inferSelect;
 export type NewOrder = typeof orders.$inferInsert;
 export type OrderItem = typeof orderItems.$inferSelect;
 export type NewOrderItem = typeof orderItems.$inferInsert;
 export type OrderStatusHistory = typeof orderStatusHistory.$inferSelect;
+export type OrderNote = typeof orderNotes.$inferSelect;
+export type NewOrderNote = typeof orderNotes.$inferInsert;
