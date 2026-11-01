@@ -75,7 +75,7 @@ Fill in your configuration values:
 4. **BETTER_AUTH_SECRET:** Cryptographic secret for signing Better Auth session tokens (minimum 16 characters, 32 recommended).
 5. **BETTER_AUTH_URL & NEXT_PUBLIC_APP_URL:** Application base URLs (defaults to `http://localhost:3000`).
 6. **SEED_ADMIN_EMAIL, SEED_ADMIN_PASSWORD, & SEED_ADMIN_NAME:** Administrator credentials for provisioning the initial store owner account via `pnpm db:seed`. Minimum 12 characters with mixed uppercase, lowercase, numbers, and symbols.
-7. **MIDTRANS_SERVER_KEY, NEXT_PUBLIC_MIDTRANS_CLIENT_KEY, & MIDTRANS_IS_PRODUCTION:** Indonesian payment gateway credentials and environment mode (`true` or `false`).
+7. **MIDTRANS_SERVER_KEY, NEXT_PUBLIC_MIDTRANS_CLIENT_KEY, MIDTRANS_MERCHANT_ID, & MIDTRANS_IS_PRODUCTION:** Indonesian payment gateway credentials, merchant identifier, and environment mode (`true` or `false`).
 8. **AUTO_REFUND_ON_STOCK_EXHAUSTED:** Late payment policy toggle (`false` by default, flagging exhausted stock for manual review; `true` triggers automatic gateway refund).
 9. **STRIPE_SECRET_KEY, NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY, & STRIPE_WEBHOOK_SECRET:** Global payment gateway credentials and webhook signing secret.
 10. **RESEND_API_KEY & EMAIL_FROM:** Transactional email provider credentials and sender address. Falls back to console output if unset or containing test keys.

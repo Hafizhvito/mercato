@@ -6,6 +6,8 @@ import { getTranslations } from "next-intl/server";
 import { StorefrontHeader } from "@/components/storefront/Header";
 import { auth } from "@/lib/auth";
 
+export const instant = false;
+
 interface Props {
   children: React.ReactNode;
   params: Promise<{ locale: string }>;

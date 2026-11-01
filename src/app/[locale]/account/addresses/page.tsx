@@ -6,6 +6,8 @@ import { db } from "@/lib/db";
 import * as schema from "@/lib/db/schema";
 import { AddressBookView } from "./AddressBookView";
 
+export const instant = false;
+
 interface Props {
   params: Promise<{ locale: string }>;
 }

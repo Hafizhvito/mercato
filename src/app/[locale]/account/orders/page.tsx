@@ -8,6 +8,8 @@ import { db } from "@/lib/db";
 import * as schema from "@/lib/db/schema";
 import { createMoney, formatMoney } from "@/lib/money";
 
+export const instant = false;
+
 interface Props {
   params: Promise<{ locale: string }>;
 }

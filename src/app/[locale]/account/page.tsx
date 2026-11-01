@@ -3,6 +3,8 @@ import { getTranslations } from "next-intl/server";
 import { auth } from "@/lib/auth";
 import { ProfileForm } from "./ProfileForm";
 
+export const instant = false;
+
 interface Props {
   params: Promise<{ locale: string }>;
 }

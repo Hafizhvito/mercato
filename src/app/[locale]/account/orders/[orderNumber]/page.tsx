@@ -10,6 +10,8 @@ import * as schema from "@/lib/db/schema";
 import { createMoney, formatMoney } from "@/lib/money";
 import { orderService } from "@/modules/orders/service";
 
+export const instant = false;
+
 interface Props {
   params: Promise<{ locale: string; orderNumber: string }>;
 }
