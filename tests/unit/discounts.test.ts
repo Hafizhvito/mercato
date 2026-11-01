@@ -17,6 +17,7 @@ describe("Discount Engine Unit Tests", () => {
       startsAt: new Date(Date.now() - 3600_000),
       expiresAt: new Date(Date.now() + 3600_000),
       usageLimit: null,
+      perCustomerLimit: null,
       usageCount: 0,
       isActive: true,
       createdAt: new Date(),

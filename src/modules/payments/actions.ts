@@ -7,6 +7,7 @@ import { authRateLimiter } from "@/lib/cache/ratelimit";
 import { db } from "@/lib/db";
 import * as schema from "@/lib/db/schema";
 import { orderService } from "@/modules/orders/service";
+import { assertPermission } from "@/server/guards";
 import { paymentService } from "./service";
 
 async function getPrimaryStoreId(): Promise<string> {
@@ -76,9 +77,7 @@ export async function refundOrderAction(input: {
   const reqHeaders = await headers();
   const session = await auth.api.getSession({ headers: reqHeaders });
 
-  if (!session?.user?.role || !["admin", "owner", "staff"].includes(session.user.role)) {
-    throw new Error("Unauthorized: Only merchant administrators may issue refunds.");
-  }
+  assertPermission(session?.user, "orders:refund");
 
   const storeId = await getPrimaryStoreId();
 

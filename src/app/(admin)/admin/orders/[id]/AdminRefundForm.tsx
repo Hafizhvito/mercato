@@ -1,6 +1,6 @@
 "use client";
 
-import { AlertCircle, CheckCircle2, DollarSign, Loader2 } from "lucide-react";
+import { AlertCircle, CheckCircle2, DollarSign, Loader2, ShieldAlert } from "lucide-react";
 import { useRouter } from "next/navigation";
 import { useState, useTransition } from "react";
 import { createMoney, formatMoney } from "@/lib/money";
@@ -12,6 +12,7 @@ interface Props {
   totalAmountMinor: number;
   currency: string;
   isNeedsReview: boolean;
+  canRefund?: boolean;
 }
 
 export function AdminRefundForm({
@@ -20,6 +21,7 @@ export function AdminRefundForm({
   totalAmountMinor,
   currency,
   isNeedsReview,
+  canRefund = true,
 }: Props) {
   const router = useRouter();
   const [isPending, startTransition] = useTransition();
@@ -33,6 +35,21 @@ export function AdminRefundForm({
   const [success, setSuccess] = useState(false);
 
   const formattedTotal = formatMoney(createMoney(totalAmountMinor, currency));
+
+  if (!canRefund) {
+    return (
+      <div className="rounded-xl border border-zinc-200 bg-zinc-50 p-6 shadow-xs space-y-2">
+        <div className="flex items-center gap-2 text-zinc-700">
+          <ShieldAlert className="h-4 w-4 text-zinc-500" />
+          <h3 className="text-sm font-bold">Pengembalian Dana (Refund)</h3>
+        </div>
+        <p className="text-xs text-zinc-500">
+          Peran staf tidak memiliki izin untuk mengeksekusi pengembalian dana (refund). Hubungi
+          Admin atau Owner toko.
+        </p>
+      </div>
+    );
+  }
 
   const handleRefund = (e: React.FormEvent) => {
     e.preventDefault();

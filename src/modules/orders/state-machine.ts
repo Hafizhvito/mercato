@@ -1,5 +1,7 @@
 import type { OrderStatus } from "./schema";
 
+export type { OrderStatus };
+
 export const ORDER_TRANSITIONS: Record<OrderStatus, readonly OrderStatus[]> = {
   pending: ["awaiting_payment", "cancelled"],
   awaiting_payment: ["paid", "cancelled"],
