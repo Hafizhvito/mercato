@@ -315,6 +315,11 @@ describe("Phase 4 Strengthened Concurrency, Reservations, & Integrity Suite", ()
 
   it("server recomputes shipping rate from carrier/service, rejecting client price tampering", async () => {
     const timestamp = Date.now();
+    await db
+      .update(schema.stores)
+      .set({ taxRatePercent: 0, taxInclusive: false })
+      .where(eq(schema.stores.id, storeAId));
+
     const product = await catalogService.createProductWithVariants(storeAId, {
       name: `Shipping Integrity Product ${timestamp}`,
       status: "published",
@@ -349,6 +354,11 @@ describe("Phase 4 Strengthened Concurrency, Reservations, & Integrity Suite", ()
 
   it("Item 8: creates order with selected non-default shipping method and accurate multi-item weight", async () => {
     const timestamp = Date.now();
+    await db
+      .update(schema.stores)
+      .set({ taxRatePercent: 0, taxInclusive: false })
+      .where(eq(schema.stores.id, storeAId));
+
     const product = await catalogService.createProductWithVariants(storeAId, {
       name: `Multi-weight Shipping Product ${timestamp}`,
       status: "published",

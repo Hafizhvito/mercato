@@ -41,7 +41,10 @@ export async function updateStoreSettingsAction(input: UpdateStoreSettingsInput)
   const user = await getAuthenticatedUser();
   assertPermission(user, "settings:manage");
 
-  const [store] = await db.select().from(schema.stores).limit(1);
+  const storeQuery = user.storeId
+    ? db.select().from(schema.stores).where(eq(schema.stores.id, user.storeId)).limit(1)
+    : db.select().from(schema.stores).limit(1);
+  const [store] = await storeQuery;
   if (!store) throw new Error("Store not found");
 
   const trimmedName = input.name?.trim();

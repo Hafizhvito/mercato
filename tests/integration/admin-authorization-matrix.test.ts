@@ -1,8 +1,12 @@
 import { NextRequest } from "next/server";
-import { beforeAll, describe, expect, it, vi } from "vitest";
+import { afterAll, beforeAll, describe, expect, it, vi } from "vitest";
 import { db } from "@/lib/db";
 import * as schema from "@/lib/db/schema";
+import { paymentService } from "@/modules/payments/service";
 import type { SessionUser } from "@/server/guards";
+
+process.env.MIDTRANS_SERVER_KEY = "SB-Mid-server-test-key-12345";
+process.env.MIDTRANS_IS_PRODUCTION = "false";
 
 // Track current session across tests
 let currentSessionUser: SessionUser | null = null;
@@ -593,6 +597,13 @@ describe("Phase 5: Comprehensive Role-Based Authorization & Multi-Tenant IDOR Ma
       );
 
       // 2. Admin -> Allowed!
+      const refundSpy = vi.spyOn(paymentService, "refundOrder").mockResolvedValue({
+        success: true,
+        orderId: orderForRefund!.id,
+        refundAmountMinor: 10000,
+        providerRefundId: "mock-refund-123",
+      } as any);
+
       currentSessionUser = adminUser;
       const resAdmin = await refundOrderAction({
         orderId: orderForRefund!.id,
@@ -600,7 +611,15 @@ describe("Phase 5: Comprehensive Role-Based Authorization & Multi-Tenant IDOR Ma
         reason: "Admin approved refund",
       });
       expect(resAdmin.success).toBe(true);
-      expect(resAdmin.providerRefundId).toBeDefined();
+      expect(resAdmin.providerRefundId).toBe("mock-refund-123");
+      expect(refundSpy).toHaveBeenCalledWith(
+        expect.objectContaining({
+          orderId: orderForRefund!.id,
+          amountMinor: 10000,
+          actorId: adminUser.id,
+        }),
+      );
+      refundSpy.mockRestore();
     });
 
     it("adjustStockAction: blocks customer, permits staff and admin", async () => {
@@ -655,7 +674,7 @@ describe("Phase 5: Comprehensive Role-Based Authorization & Multi-Tenant IDOR Ma
         updateStoreSettingsAction({
           name: "Updated Store Name",
           lowStockThreshold: 5,
-          taxRatePercent: 11,
+          taxRatePercent: 0,
           taxInclusive: false,
         }),
       ).rejects.toThrow(
@@ -666,7 +685,7 @@ describe("Phase 5: Comprehensive Role-Based Authorization & Multi-Tenant IDOR Ma
       const resAdmin = await updateStoreSettingsAction({
         name: "Store Alpha Updated",
         lowStockThreshold: 5,
-        taxRatePercent: 11,
+        taxRatePercent: 0,
         taxInclusive: false,
       });
       expect(resAdmin.success).toBe(true);
@@ -720,5 +739,12 @@ describe("Phase 5: Comprehensive Role-Based Authorization & Multi-Tenant IDOR Ma
       const viewB = await AccountOrdersPage({ params: Promise.resolve({ locale: "id" }) });
       expect(extractText(viewB)).not.toContain(storeAOrderNumber);
     });
+  });
+
+  afterAll(async () => {
+    // Reset stores to zero tax to guarantee no side effects on concurrent test suites
+    if (storeAId) {
+      await db.update(schema.stores).set({ taxRatePercent: 0, taxInclusive: false });
+    }
   });
 });
