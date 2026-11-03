@@ -1,12 +1,10 @@
-import { and, desc, eq } from "drizzle-orm";
+import { desc, eq } from "drizzle-orm";
 import {
   AlertCircle,
   ArrowLeft,
   Clock,
-  FileText,
   History,
   Package,
-  Receipt,
   RotateCcw,
   Truck,
   User,

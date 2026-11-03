@@ -1,5 +1,5 @@
-import { and, asc, count, desc, eq, gte, ilike, lte, or, sql } from "drizzle-orm";
-import { AlertCircle, Download, Eye, Filter, RefreshCw, Search, ShoppingBag } from "lucide-react";
+import { and, asc, count, desc, eq, gte, ilike, lte, or } from "drizzle-orm";
+import { AlertCircle, Download, Eye, Search, ShoppingBag } from "lucide-react";
 import { headers } from "next/headers";
 import Link from "next/link";
 import { redirect } from "next/navigation";
@@ -63,14 +63,14 @@ export default async function AdminOrdersPage({ searchParams }: Props) {
 
   if (fromDate) {
     const d = new Date(fromDate);
-    if (!isNaN(d.getTime())) {
+    if (!Number.isNaN(d.getTime())) {
       conditions.push(gte(schema.orders.createdAt, d));
     }
   }
 
   if (toDate) {
     const d = new Date(toDate);
-    if (!isNaN(d.getTime())) {
+    if (!Number.isNaN(d.getTime())) {
       d.setHours(23, 59, 59, 999);
       conditions.push(lte(schema.orders.createdAt, d));
     }

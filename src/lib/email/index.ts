@@ -62,6 +62,14 @@ export interface EmailService {
     trackingUrl?: string;
     locale?: string;
   }): Promise<void>;
+  sendStaffInviteEmail(options: {
+    to: string;
+    role: string;
+    inviteUrl: string;
+    token: string;
+    expiresAt: Date;
+    locale?: string;
+  }): Promise<void>;
   sendEmail(options: SendEmailOptions): Promise<void>;
 }
 
@@ -204,6 +212,30 @@ export class ConsoleEmailService implements EmailService {
         `Carrier: ${options.carrier}\n` +
         `Tracking Number: ${options.trackingNumber}\n` +
         `Tracking URL: ${options.trackingUrl ?? "N/A"}\n` +
+        "=======================================================\n",
+    );
+  }
+
+  async sendStaffInviteEmail(options: {
+    to: string;
+    role: string;
+    inviteUrl: string;
+    token: string;
+    expiresAt: Date;
+    locale?: string;
+  }): Promise<void> {
+    logger.info(
+      { to: options.to, role: options.role, url: options.inviteUrl },
+      "Development Email: Sending staff invitation link",
+    );
+    console.log(
+      "\n=======================================================\n" +
+        "[MERCATO DEV EMAIL SERVICE - STAFF INVITATION]\n" +
+        `To: ${options.to}\n` +
+        `Role: ${options.role}\n` +
+        `Invite URL: ${options.inviteUrl}\n` +
+        `Token: ${options.token}\n` +
+        `Expires At: ${options.expiresAt.toISOString()}\n` +
         "=======================================================\n",
     );
   }
@@ -419,6 +451,30 @@ export class ResendEmailService implements EmailService {
       );
       throw error;
     }
+  }
+
+  async sendStaffInviteEmail(options: {
+    to: string;
+    role: string;
+    inviteUrl: string;
+    token: string;
+    expiresAt: Date;
+    locale?: string;
+  }): Promise<void> {
+    logger.info(
+      { to: options.to, role: options.role, url: options.inviteUrl },
+      "Development Email: Sending staff invitation link",
+    );
+    console.log(
+      "\n=======================================================\n" +
+        "[MERCATO DEV EMAIL SERVICE - STAFF INVITATION]\n" +
+        `To: ${options.to}\n` +
+        `Role: ${options.role}\n` +
+        `Invite URL: ${options.inviteUrl}\n` +
+        `Token: ${options.token}\n` +
+        `Expires At: ${options.expiresAt.toISOString()}\n` +
+        "=======================================================\n",
+    );
   }
 
   async sendEmail(options: SendEmailOptions): Promise<void> {

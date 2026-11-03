@@ -385,14 +385,14 @@ describe("Phase 4 Payments, Webhooks, Integrity, & Refunds Suite", () => {
       totalPrice: 200000,
     });
 
-    const grossAmountB = `${orderB!.totalAmount}.00`;
+    const grossAmountB = `${orderB?.totalAmount}.00`;
     const sigB = crypto
       .createHash("sha512")
-      .update(`${orderB!.orderNumber}200${grossAmountB}${serverKey}`)
+      .update(`${orderB?.orderNumber}200${grossAmountB}${serverKey}`)
       .digest("hex");
 
     const payloadB = {
-      order_id: orderB!.orderNumber,
+      order_id: orderB?.orderNumber,
       status_code: "200",
       gross_amount: grossAmountB,
       signature_key: sigB,
@@ -424,7 +424,7 @@ describe("Phase 4 Payments, Webhooks, Integrity, & Refunds Suite", () => {
         ),
       );
     expect(auditEntry).toBeDefined();
-    const parsedDetails = JSON.parse(auditEntry!.details as string);
+    const parsedDetails = JSON.parse(auditEntry?.details as string);
     expect(parsedDetails.reason).toContain("stock exhausted. Awaiting merchant manual review.");
 
     // C) Explicit setting test: when AUTO_REFUND_ON_STOCK_EXHAUSTED="true", provider refund IS called
@@ -465,14 +465,14 @@ describe("Phase 4 Payments, Webhooks, Integrity, & Refunds Suite", () => {
         totalPrice: 200000,
       });
 
-      const grossAmountC = `${orderC!.totalAmount}.00`;
+      const grossAmountC = `${orderC?.totalAmount}.00`;
       const sigC = crypto
         .createHash("sha512")
-        .update(`${orderC!.orderNumber}200${grossAmountC}${serverKey}`)
+        .update(`${orderC?.orderNumber}200${grossAmountC}${serverKey}`)
         .digest("hex");
 
       const payloadC = {
-        order_id: orderC!.orderNumber,
+        order_id: orderC?.orderNumber,
         status_code: "200",
         gross_amount: grossAmountC,
         signature_key: sigC,
@@ -533,7 +533,7 @@ describe("Phase 4 Payments, Webhooks, Integrity, & Refunds Suite", () => {
       .from(schema.productVariants)
       .where(eq(schema.productVariants.id, testVariantId))
       .limit(1);
-    const initialStock = variantBefore!.stock;
+    const initialStock = variantBefore?.stock;
 
     // Execute refund with restockInventory: true
     const refundRes = await paymentService.refundOrder({
@@ -571,7 +571,7 @@ describe("Phase 4 Payments, Webhooks, Integrity, & Refunds Suite", () => {
       .where(eq(schema.productVariants.id, testVariantId))
       .limit(1);
 
-    expect(variantAfter!.stock).toBe(initialStock + 2);
+    expect(variantAfter?.stock).toBe((initialStock ?? 0) + 2);
 
     // Verify audit log entry
     const [auditEntry] = await db

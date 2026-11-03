@@ -1,10 +1,20 @@
 "use client";
 
-import { AlertCircle, CheckCircle2, Crown, Loader2, Plus, Shield, Users, X } from "lucide-react";
+import {
+  AlertCircle,
+  CheckCircle2,
+  Crown,
+  Loader2,
+  Mail,
+  Plus,
+  Shield,
+  Users,
+  X,
+} from "lucide-react";
 import { useRouter } from "next/navigation";
 import { useState, useTransition } from "react";
 import type { User } from "@/lib/db/schema";
-import { createStaffAccountAction, updateStaffRoleAction } from "@/modules/settings/actions";
+import { inviteStaffAction, updateStaffRoleAction } from "@/modules/settings/actions";
 import type { UserRole } from "@/server/guards";
 
 interface Props {
@@ -26,29 +36,29 @@ export function StaffManagementTab({
   const [error, setError] = useState<string | null>(null);
   const [success, setSuccess] = useState<string | null>(null);
 
-  // New staff form
-  const [name, setName] = useState("");
+  // Invite staff form
   const [email, setEmail] = useState("");
   const [role, setRole] = useState<"staff" | "admin">("staff");
 
   const isOwner = currentUserRole === "owner";
   const ownerCount = staffList.filter((s) => s.role === "owner").length;
 
-  const handleCreate = (e: React.FormEvent) => {
+  const handleInvite = (e: React.FormEvent) => {
     e.preventDefault();
     setError(null);
     setSuccess(null);
 
     startTransition(async () => {
       try {
-        await createStaffAccountAction({ name, email, role });
-        setSuccess(`Akun staf "${name}" (${email}) berhasil ditambahkan sebagai ${role}.`);
+        await inviteStaffAction({ email, role });
+        setSuccess(
+          `Undangan aktivasi berhasil dikirim ke "${email}" sebagai peran ${role}. Tautan undangan telah dicetak ke server log.`,
+        );
         setModalOpen(false);
-        setName("");
         setEmail("");
         router.refresh();
       } catch (err) {
-        setError(err instanceof Error ? err.message : "Gagal menambahkan staf");
+        setError(err instanceof Error ? err.message : "Gagal mengundang staf");
       }
     });
   };
@@ -221,7 +231,13 @@ export function StaffManagementTab({
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4">
           <div className="relative w-full max-w-md rounded-2xl bg-white p-6 shadow-2xl border border-zinc-200 space-y-4">
             <div className="flex items-center justify-between border-b border-zinc-100 pb-3">
-              <h4 className="text-base font-bold text-zinc-950">Tambah Anggota Tim Staf</h4>
+              <div>
+                <h4 className="text-base font-bold text-zinc-950">Undang Anggota Tim Baru</h4>
+                <p className="text-[11px] text-zinc-500 mt-0.5">
+                  Tautan aktivasi berbatas waktu (48 jam) akan dikirimkan ke email ini. Calon staf
+                  akan mengatur kata sandi mereka sendiri secara aman.
+                </p>
+              </div>
               <button
                 type="button"
                 onClick={() => setModalOpen(false)}
@@ -231,31 +247,16 @@ export function StaffManagementTab({
               </button>
             </div>
 
-            <form onSubmit={handleCreate} className="space-y-3 text-xs">
-              <div>
-                <label htmlFor="staff-name" className="block font-semibold text-zinc-700 mb-1">
-                  Nama Lengkap
-                </label>
-                <input
-                  id="staff-name"
-                  type="text"
-                  required
-                  placeholder="Contoh: Rian Anggara"
-                  value={name}
-                  onChange={(e) => setName(e.target.value)}
-                  className="w-full rounded-lg border border-zinc-200 p-2 text-zinc-900 focus:border-zinc-900 focus:outline-hidden"
-                />
-              </div>
-
+            <form onSubmit={handleInvite} className="space-y-3 text-xs">
               <div>
                 <label htmlFor="staff-email" className="block font-semibold text-zinc-700 mb-1">
-                  Alamat Email Akun
+                  Alamat Email Calon Anggota
                 </label>
                 <input
                   id="staff-email"
                   type="email"
                   required
-                  placeholder="rian@mercato.local"
+                  placeholder="staf@mercato.local"
                   value={email}
                   onChange={(e) => setEmail(e.target.value)}
                   className="w-full rounded-lg border border-zinc-200 p-2 text-zinc-900 focus:border-zinc-900 focus:outline-hidden font-mono"
@@ -264,7 +265,7 @@ export function StaffManagementTab({
 
               <div>
                 <label htmlFor="staff-role" className="block font-semibold text-zinc-700 mb-1">
-                  Pilihan Peran
+                  Peran Administratif
                 </label>
                 <select
                   id="staff-role"
@@ -272,9 +273,11 @@ export function StaffManagementTab({
                   onChange={(e) => setRole(e.target.value as "staff" | "admin")}
                   className="w-full rounded-lg border border-zinc-200 p-2 text-zinc-900 focus:border-zinc-900 focus:outline-hidden bg-white"
                 >
-                  <option value="staff">Staff (Fulfillment, Stok, Pesanan, Profil)</option>
+                  <option value="staff">
+                    Staff (Fulfillment, Stok, Pesanan, Profil Pelanggan)
+                  </option>
                   <option value="admin">
-                    Admin (Operasional Penuh, Diskon, Pengaturan, Analitik)
+                    Admin (Operasional Penuh, Diskon, Pengaturan, Analitik, Audit Log)
                   </option>
                 </select>
               </div>
@@ -292,8 +295,12 @@ export function StaffManagementTab({
                   disabled={isPending}
                   className="inline-flex items-center gap-1.5 px-4 py-2 rounded-lg bg-zinc-900 font-semibold text-white hover:bg-zinc-800 disabled:opacity-50 transition"
                 >
-                  {isPending && <Loader2 className="h-3 w-3 animate-spin" />}
-                  Simpan Staf
+                  {isPending ? (
+                    <Loader2 className="h-3 w-3 animate-spin" />
+                  ) : (
+                    <Mail className="h-3.5 w-3.5" />
+                  )}
+                  Kirim Undangan Aktivasi
                 </button>
               </div>
             </form>

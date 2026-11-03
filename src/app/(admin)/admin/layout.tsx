@@ -8,6 +8,13 @@ export const instant = false;
 
 export default async function AdminLayout({ children }: { children: React.ReactNode }) {
   const reqHeaders = await headers();
+  const pathname = reqHeaders.get("x-pathname") || "";
+
+  // Allow unauthenticated access to the invite acceptance page
+  if (pathname.startsWith("/admin/accept-invite")) {
+    return <>{children}</>;
+  }
+
   const session = await auth.api.getSession({
     headers: reqHeaders,
   });

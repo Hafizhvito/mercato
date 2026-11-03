@@ -24,7 +24,9 @@ export async function seedAnalyticsOrders() {
     process.exit(1);
   }
 
-  console.log(`[SEED ANALYTICS]: Seeding historical orders into ${safety.maskedTarget}...`);
+  console.log(
+    `[SEED ANALYTICS]: Seeding ~200 demo historical orders into ${safety.maskedTarget}...`,
+  );
 
   const [store] = await db.select().from(schema.stores).limit(1);
   if (!store) {
@@ -48,39 +50,74 @@ export async function seedAnalyticsOrders() {
     throw new Error("No product variants found in database. Please run catalog seed first.");
   }
 
+  // Fictional test customers using strictly @example.test addresses
   const mockCustomers = [
-    { name: "Budi Santoso", email: "budi.santoso@example.com", phone: "081234567890" },
-    { name: "Siti Rahmawati", email: "siti.rahma@example.com", phone: "081398765432" },
-    { name: "Ahmad Wijaya", email: "ahmad.wijaya@example.com", phone: "085612345678" },
-    { name: "Dewi Lestari", email: "dewi.lestari@example.com", phone: "087811223344" },
+    { name: "Budi Santoso", email: "budi.santoso@example.test", phone: "081234567890" },
+    { name: "Siti Rahmawati", email: "siti.rahma@example.test", phone: "081398765432" },
+    { name: "Ahmad Wijaya", email: "ahmad.wijaya@example.test", phone: "085612345678" },
+    { name: "Dewi Lestari", email: "dewi.lestari@example.test", phone: "087811223344" },
+    { name: "Rian Hidayat", email: "rian.hidayat@example.test", phone: "082155667788" },
+    { name: "Nurul Indah", email: "nurul.indah@example.test", phone: "081299887766" },
+    { name: "Fajar Pratama", email: "fajar.pratama@example.test", phone: "085733445566" },
+    { name: "Maya Anggraini", email: "maya.anggraini@example.test", phone: "087711992288" },
   ];
 
   const now = Date.now();
   const dayMs = 24 * 60 * 60 * 1000;
   let seededOrdersCount = 0;
+  let seededRefundsCount = 0;
 
-  // Generate 15 historical orders over the past 30 days
-  const sampleDaysAgo = [1, 2, 3, 5, 7, 9, 12, 14, 16, 19, 21, 23, 25, 27, 29];
+  // Generate 200 orders spread across the past 60 days
+  const TOTAL_ORDERS = 200;
 
-  for (let i = 0; i < sampleDaysAgo.length; i++) {
-    const daysAgo = sampleDaysAgo[i] ?? 1;
-    const orderDate = new Date(now - daysAgo * dayMs);
+  for (let i = 0; i < TOTAL_ORDERS; i++) {
+    // Spread evenly across 60 days (0 to 59 days ago)
+    const daysAgo = (i % 60) + 1;
+    // Vary the hour to test daytime and boundary UTC timestamps (e.g. 17:30 UTC)
+    const hourOffset = (i * 7) % 24;
+    const orderDate = new Date(now - daysAgo * dayMs + hourOffset * 60 * 60 * 1000);
     const customer = mockCustomers[i % mockCustomers.length] ?? mockCustomers[0];
     if (!customer) continue;
-    const orderNumber = `MRC-SIM-${Date.now().toString().slice(-6)}-${i + 1}`;
 
-    // Select 1 or 2 items
+    const orderNumber = `MRC-SIM-${daysAgo.toString().padStart(2, "0")}-${(i + 1).toString().padStart(3, "0")}`;
+
+    // Select 1 to 3 items
     const item1 = variants[i % variants.length] ?? variants[0];
     const item2 = variants[(i + 1) % variants.length] ?? variants[0];
-    if (!item1 || !item2) continue;
-    const hasSecondItem = i % 2 === 0;
+    const item3 = variants[(i + 2) % variants.length] ?? variants[0];
+    if (!item1) continue;
 
-    const subtotal = item1.price + (hasSecondItem ? item2.price : 0);
-    const shippingAmount = 15000;
+    const itemCount = (i % 3) + 1;
+    const items = [item1];
+    if (itemCount >= 2 && item2) items.push(item2);
+    if (itemCount === 3 && item3) items.push(item3);
+
+    const subtotal = items.reduce((acc, it) => acc + it.price, 0);
+    const shippingAmount = i % 2 === 0 ? 15000 : 25000;
     const totalAmount = subtotal + shippingAmount;
 
-    const statuses = ["delivered", "shipped", "paid", "processing", "delivered"];
-    const status = statuses[i % statuses.length] ?? "paid";
+    // Distribute statuses realistically
+    // ~60% delivered, ~20% shipped, ~10% paid/processing, ~5% cancelled, ~5% refunded
+    const mod = i % 20;
+    let status = "delivered";
+    let paymentStatus = "paid";
+
+    if (mod === 0) {
+      status = "cancelled";
+      paymentStatus = "unpaid";
+    } else if (mod === 1) {
+      status = "refunded";
+      paymentStatus = "refunded";
+    } else if (mod === 2 || mod === 3) {
+      status = "processing";
+      paymentStatus = "paid";
+    } else if (mod >= 4 && mod <= 7) {
+      status = "shipped";
+      paymentStatus = "paid";
+    } else {
+      status = "delivered";
+      paymentStatus = "paid";
+    }
 
     const [order] = await db
       .insert(schema.orders)
@@ -92,12 +129,13 @@ export async function seedAnalyticsOrders() {
         idempotencyKey: `idem-sim-${i}-${Date.now()}`,
         checkoutSessionId: `sess-sim-${i}-${Date.now()}`,
         status,
-        paymentStatus: "paid",
+        paymentStatus,
         paymentProvider: "midtrans",
         currency: "IDR",
         subtotal,
         shippingAmount,
         discountAmount: 0,
+        taxAmount: 0,
         totalAmount,
         shippingCarrier: "JNE",
         shippingService: "REG",
@@ -108,11 +146,11 @@ export async function seedAnalyticsOrders() {
         shippingAddress: {
           recipientName: customer.name,
           phone: customer.phone,
-          street: "Jl. Merdeka No. 45",
-          district: "Gambir",
-          city: "Jakarta Pusat",
+          street: `Jl. Simulasi No. ${i + 1}`,
+          district: "Kebayoran Baru",
+          city: "Jakarta Selatan",
           province: "DKI Jakarta",
-          postalCode: "10110",
+          postalCode: "12180",
           country: "Indonesia",
         },
         createdAt: orderDate,
@@ -123,39 +161,40 @@ export async function seedAnalyticsOrders() {
     if (!order) continue;
 
     // Insert order items
-    await db.insert(schema.orderItems).values([
-      {
+    await db.insert(schema.orderItems).values(
+      items.map((it) => ({
         orderId: order.id,
-        productId: item1.productId,
-        variantId: item1.id,
-        sku: item1.sku,
-        productName: item1.productName,
-        variantTitle: item1.title,
+        productId: it.productId,
+        variantId: it.id,
+        sku: it.sku,
+        productName: it.productName,
+        variantTitle: it.title,
         quantity: 1,
-        unitPrice: item1.price,
-        totalPrice: item1.price,
-      },
-      ...(hasSecondItem
-        ? [
-            {
-              orderId: order.id,
-              productId: item2.productId,
-              variantId: item2.id,
-              sku: item2.sku,
-              productName: item2.productName,
-              variantTitle: item2.title,
-              quantity: 1,
-              unitPrice: item2.price,
-              totalPrice: item2.price,
-            },
-          ]
-        : []),
-    ]);
+        unitPrice: it.price,
+        totalPrice: it.price,
+      })),
+    );
+
+    // If refunded status, insert refund record
+    if (status === "refunded") {
+      await db.insert(schema.refunds).values({
+        orderId: order.id,
+        amount: totalAmount,
+        currency: "IDR",
+        reason: "Simulated customer satisfaction refund",
+        restocked: true,
+        status: "completed",
+        createdAt: new Date(orderDate.getTime() + 2 * 60 * 60 * 1000),
+      });
+      seededRefundsCount++;
+    }
 
     seededOrdersCount++;
   }
 
-  console.log(`[SEED ANALYTICS]: Successfully generated ${seededOrdersCount} historical orders!`);
+  console.log(
+    `[SEED ANALYTICS]: Successfully generated ${seededOrdersCount} orders and ${seededRefundsCount} refunds!`,
+  );
 }
 
 // Auto-run if executed directly via node/tsx

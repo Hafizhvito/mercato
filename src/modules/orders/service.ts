@@ -211,7 +211,34 @@ export class OrderService {
         }
       }
 
-      const totalAmount = Math.max(0, subtotal - discountAmount + verifiedShippingAmount);
+      // Fetch store settings for tax computation
+      const [storeRow] = await tx
+        .select({
+          taxRatePercent: schema.stores.taxRatePercent,
+          taxInclusive: schema.stores.taxInclusive,
+        })
+        .from(schema.stores)
+        .where(eq(schema.stores.id, params.storeId))
+        .limit(1);
+
+      const taxRatePercent = storeRow?.taxRatePercent ?? 0;
+      const isTaxInclusive = storeRow?.taxInclusive ?? false;
+
+      let taxAmount = 0;
+      const taxableSubtotal = Math.max(0, subtotal - discountAmount);
+
+      if (taxRatePercent > 0) {
+        if (isTaxInclusive) {
+          taxAmount = Math.round(taxableSubtotal - taxableSubtotal / (1 + taxRatePercent / 100));
+        } else {
+          taxAmount = Math.round(taxableSubtotal * (taxRatePercent / 100));
+        }
+      }
+
+      const totalAmount = Math.max(
+        0,
+        taxableSubtotal + verifiedShippingAmount + (isTaxInclusive ? 0 : taxAmount),
+      );
       const orderNumber = this.generateOrderNumber();
       const guestAccessToken = crypto.randomBytes(32).toString("hex");
 
@@ -226,7 +253,7 @@ export class OrderService {
         subtotal,
         discountAmount,
         shippingAmount: verifiedShippingAmount,
-        taxAmount: 0,
+        taxAmount,
         totalAmount,
         discountId: appliedDiscountId,
         shippingCarrier: matchedRate.carrier,

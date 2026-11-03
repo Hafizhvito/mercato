@@ -1,5 +1,5 @@
 import { eq } from "drizzle-orm";
-import { ArrowLeft, CheckCircle2, Clock, MapPin, Package, Receipt, Truck } from "lucide-react";
+import { ArrowLeft, MapPin, Package, Receipt, Truck } from "lucide-react";
 import { headers } from "next/headers";
 import Link from "next/link";
 import { notFound, redirect } from "next/navigation";

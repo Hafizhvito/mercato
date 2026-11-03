@@ -1,6 +1,6 @@
 "use client";
 
-import { Check, Mail, Send } from "lucide-react";
+import { Mail } from "lucide-react";
 import { useState } from "react";
 
 interface Template {
@@ -97,7 +97,7 @@ const TEMPLATES: Template[] = [
 ];
 
 export function EmailTemplatesPreview() {
-  const [selectedId, setSelectedId] = useState(TEMPLATES[0]!.id);
+  const [selectedId, setSelectedId] = useState(TEMPLATES[0]?.id);
   const [previewLocale, setPreviewLocale] = useState<"id" | "en">("id");
 
   const currentTemplate = TEMPLATES.find((t) => t.id === selectedId) || TEMPLATES[0]!;

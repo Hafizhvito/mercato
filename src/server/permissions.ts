@@ -145,7 +145,7 @@ export function assertPermission(
   user: SessionUser | null | undefined,
   permission: AdminPermission,
 ): asserts user is SessionUser & { role: UserRole } {
-  if (!user || !user.role) {
+  if (!user?.role) {
     throw new AuthorizationError("Authentication required: No active session found");
   }
 

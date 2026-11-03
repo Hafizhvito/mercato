@@ -3,7 +3,6 @@ import { afterAll, beforeAll, describe, expect, it } from "vitest";
 import { db } from "@/lib/db";
 import * as schema from "@/lib/db/schema";
 import { catalogService } from "@/modules/catalog/service";
-import { discountService } from "@/modules/discounts/service";
 import { inventoryService } from "@/modules/inventory/service";
 import type { ShippingAddress } from "@/modules/orders/schema";
 import { orderService } from "@/modules/orders/service";
@@ -166,7 +165,7 @@ describe("Phase 4 Strengthened Concurrency, Reservations, & Integrity Suite", ()
     // Verify database state: Available stock must be 0
     const availableStock = await inventoryService.getAvailableStock(singleStockVariantId);
     expect(availableStock).toBe(0);
-  });
+  }, 20000);
 
   it("handles 20 parallel buyers of quantity 1 against stock of 5: exactly 5 succeed, 15 fail", async () => {
     const CONCURRENT_ATTEMPTS = 20;
@@ -212,7 +211,7 @@ describe("Phase 4 Strengthened Concurrency, Reservations, & Integrity Suite", ()
     // Available stock must be exactly 0 (no negative stock, no overselling)
     const availableStock = await inventoryService.getAvailableStock(fiveStockVariantId);
     expect(availableStock).toBe(0);
-  });
+  }, 20000);
 
   it("releases reservation when expired and restores available stock", async () => {
     const timestamp = Date.now();

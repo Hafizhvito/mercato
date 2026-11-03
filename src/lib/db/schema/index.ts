@@ -145,6 +145,31 @@ export const customerAddresses = pgTable(
   (table) => [index("customer_addresses_customer_idx").on(table.customerId)],
 );
 
+// 10. Staff Invitations (Secure single-use invite flow)
+export const staffInvitations = pgTable(
+  "staff_invitations",
+  {
+    id: uuid("id").defaultRandom().primaryKey(),
+    storeId: uuid("store_id")
+      .notNull()
+      .references(() => stores.id, { onDelete: "cascade" }),
+    email: varchar("email", { length: 255 }).notNull(),
+    role: varchar("role", { length: 50 }).notNull(), // 'staff' | 'admin'
+    token: varchar("token", { length: 128 }).notNull().unique(),
+    invitedBy: text("invited_by")
+      .notNull()
+      .references(() => user.id, { onDelete: "cascade" }),
+    expiresAt: timestamp("expires_at", { withTimezone: true }).notNull(),
+    acceptedAt: timestamp("accepted_at", { withTimezone: true }),
+    createdAt: timestamp("created_at", { withTimezone: true }).defaultNow().notNull(),
+  },
+  (table) => [
+    index("staff_invitations_store_idx").on(table.storeId),
+    index("staff_invitations_token_idx").on(table.token),
+    index("staff_invitations_email_idx").on(table.email),
+  ],
+);
+
 // Type inferences
 export type Store = typeof stores.$inferSelect;
 export type NewStore = typeof stores.$inferInsert;
@@ -157,6 +182,8 @@ export type TwoFactor = typeof twoFactor.$inferSelect;
 export type AuditLog = typeof auditLogs.$inferSelect;
 export type CustomerAddress = typeof customerAddresses.$inferSelect;
 export type NewCustomerAddress = typeof customerAddresses.$inferInsert;
+export type StaffInvitation = typeof staffInvitations.$inferSelect;
+export type NewStaffInvitation = typeof staffInvitations.$inferInsert;
 
 export * from "@/modules/cart/schema";
 // Domain Schemas

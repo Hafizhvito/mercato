@@ -1,18 +1,32 @@
-import { and, desc, eq, gte, ilike, lte, or, sql } from "drizzle-orm";
+import { and, desc, eq, gte, ilike, lte, or } from "drizzle-orm";
 import { headers } from "next/headers";
 import { type NextRequest, NextResponse } from "next/server";
 import { auth } from "@/lib/auth";
 import { db } from "@/lib/db";
 import * as schema from "@/lib/db/schema";
+import { maskPhone } from "@/lib/mask";
 import { assertPermission } from "@/server/guards";
 
-function escapeCsvCell(value: string | number | null | undefined): string {
+export function escapeCsvCell(value: string | number | null | undefined): string {
   if (value === null || value === undefined) return '""';
-  const str = String(value);
-  if (str.includes('"') || str.includes(",") || str.includes("\n") || str.includes("\r")) {
-    return `"${str.replace(/"/g, '""')}"`;
+  let str = String(value);
+
+  // Neutralize spreadsheet formula injection (OWASP CSV Injection defense)
+  // Cells starting with =, +, -, @, tab, or carriage return must be prefixed with '
+  if (
+    str.startsWith("=") ||
+    str.startsWith("+") ||
+    str.startsWith("-") ||
+    str.startsWith("@") ||
+    str.startsWith("\t") ||
+    str.startsWith("\r")
+  ) {
+    str = `'${str}`;
   }
-  return `"${str}"`;
+
+  // Escape inner double quotes by doubling them
+  const escaped = str.replace(/"/g, '""');
+  return `"${escaped}"`;
 }
 
 export async function GET(request: NextRequest) {
@@ -57,14 +71,14 @@ export async function GET(request: NextRequest) {
 
   if (fromParam) {
     const fromDate = new Date(fromParam);
-    if (!isNaN(fromDate.getTime())) {
+    if (!Number.isNaN(fromDate.getTime())) {
       conditions.push(gte(schema.orders.createdAt, fromDate));
     }
   }
 
   if (toParam) {
     const toDate = new Date(toParam);
-    if (!isNaN(toDate.getTime())) {
+    if (!Number.isNaN(toDate.getTime())) {
       // Include whole day
       toDate.setHours(23, 59, 59, 999);
       conditions.push(lte(schema.orders.createdAt, toDate));
@@ -119,7 +133,7 @@ export async function GET(request: NextRequest) {
         order.paymentProvider || "",
         order.guestEmail || order.customerId || "",
         addr.recipientName || "",
-        addr.phone || "",
+        addr.phone ? maskPhone(String(addr.phone)) : "",
         addr.city || "",
         addr.province || "",
         order.shippingCarrier || "",
@@ -134,7 +148,7 @@ export async function GET(request: NextRequest) {
     );
   }
 
-  const csvContent = "\uFEFF" + csvRows.join("\r\n"); // UTF-8 BOM for Excel compatibility
+  const csvContent = `\uFEFF${csvRows.join("\r\n")}`; // UTF-8 BOM for Excel compatibility
   const filename = `orders-export-${new Date().toISOString().slice(0, 10)}.csv`;
 
   return new NextResponse(csvContent, {

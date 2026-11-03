@@ -1,3 +1,6 @@
+import { eq } from "drizzle-orm";
+import { db } from "@/lib/db";
+import * as schema from "@/lib/db/schema";
 import type { CalculateShippingParams, ShippingProvider, ShippingRate } from "../types";
 
 export class FlatRateShippingProvider implements ShippingProvider {
@@ -7,6 +10,27 @@ export class FlatRateShippingProvider implements ShippingProvider {
     // Base weight tier (every 1000g adds base increment)
     const weightKg = Math.max(1, Math.ceil(params.weightGrams / 1000));
 
+    // Check custom flat rates configured in store settings
+    let customRates: { jabodetabek?: number; java?: number; luarJava?: number } | null = null;
+    if (params.storeId) {
+      try {
+        const [store] = await db
+          .select({ shippingFlatRates: schema.stores.shippingFlatRates })
+          .from(schema.stores)
+          .where(eq(schema.stores.id, params.storeId))
+          .limit(1);
+        if (store?.shippingFlatRates && typeof store.shippingFlatRates === "object") {
+          customRates = store.shippingFlatRates as {
+            jabodetabek?: number;
+            java?: number;
+            luarJava?: number;
+          };
+        }
+      } catch {
+        // Fallback to default rates if store query fails or in mock test context
+      }
+    }
+
     // Distance multiplier: check destination province
     const isJabodetabek =
       params.destination.province === "DKI Jakarta" ||
@@ -15,8 +39,27 @@ export class FlatRateShippingProvider implements ShippingProvider {
       params.destination.city.includes("Tangerang") ||
       params.destination.city.includes("Bekasi");
 
-    const baseReguler = isJabodetabek ? 10000 : 15000;
-    const baseExpress = isJabodetabek ? 20000 : 30000;
+    const isJava =
+      isJabodetabek ||
+      params.destination.province === "Jawa Barat" ||
+      params.destination.province === "Jawa Tengah" ||
+      params.destination.province === "DI Yogyakarta" ||
+      params.destination.province === "Jawa Timur" ||
+      params.destination.province === "Banten";
+
+    let baseReguler: number;
+    let baseExpress: number;
+
+    if (isJabodetabek) {
+      baseReguler = customRates?.jabodetabek ?? 10000;
+      baseExpress = customRates?.jabodetabek ? customRates.jabodetabek * 2 : 20000;
+    } else if (isJava) {
+      baseReguler = customRates?.java ?? 15000;
+      baseExpress = customRates?.java ? customRates.java * 2 : 30000;
+    } else {
+      baseReguler = customRates?.luarJava ?? 25000;
+      baseExpress = customRates?.luarJava ? customRates.luarJava * 2 : 45000;
+    }
 
     return [
       {
@@ -25,7 +68,7 @@ export class FlatRateShippingProvider implements ShippingProvider {
         service: "REG",
         title: "JNE Reguler",
         costMinor: baseReguler * weightKg,
-        estimatedDays: isJabodetabek ? "1-2 days" : "2-3 days",
+        estimatedDays: isJabodetabek ? "1-2 days" : isJava ? "2-3 days" : "3-5 days",
       },
       {
         id: "jne_yes",
@@ -33,7 +76,7 @@ export class FlatRateShippingProvider implements ShippingProvider {
         service: "YES",
         title: "JNE YES (Yakin Esok Sampai)",
         costMinor: baseExpress * weightKg,
-        estimatedDays: "1 day",
+        estimatedDays: isJabodetabek ? "1 day" : "1-2 days",
       },
       {
         id: "sicepat_best",

@@ -1,6 +1,6 @@
 "use server";
 
-import { and, desc, eq, sql } from "drizzle-orm";
+import { and, eq, sql } from "drizzle-orm";
 import { revalidatePath } from "next/cache";
 import { headers } from "next/headers";
 import { auth } from "@/lib/auth";
@@ -182,8 +182,8 @@ export async function fulfillOrderAction(input: {
   };
 
   if (input.status === "shipped") {
-    updateData.shippingCarrier = input.carrier!.trim();
-    updateData.shippingTrackingNumber = input.trackingNumber!.trim();
+    updateData.shippingCarrier = input.carrier?.trim();
+    updateData.shippingTrackingNumber = input.trackingNumber?.trim();
     updateData.shippedAt = now;
   } else if (input.status === "delivered") {
     updateData.deliveredAt = now;
@@ -231,8 +231,8 @@ export async function fulfillOrderAction(input: {
         await emailService.sendOrderShippedEmail({
           to: customerEmail,
           orderNumber: order.orderNumber,
-          trackingNumber: input.trackingNumber!.trim(),
-          carrier: input.carrier!.trim(),
+          trackingNumber: input.trackingNumber?.trim() || order.shippingTrackingNumber || "-",
+          carrier: input.carrier?.trim() || order.shippingCarrier || "Standard",
           trackingUrl,
           locale: "id",
         });

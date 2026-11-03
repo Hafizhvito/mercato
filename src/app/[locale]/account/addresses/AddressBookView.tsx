@@ -1,16 +1,6 @@
 "use client";
 
-import {
-  AlertCircle,
-  CheckCircle2,
-  Edit2,
-  Loader2,
-  MapPin,
-  Plus,
-  Star,
-  Trash2,
-  X,
-} from "lucide-react";
+import { AlertCircle, Edit2, Loader2, MapPin, Plus, Star, Trash2, X } from "lucide-react";
 import { useRouter } from "next/navigation";
 import { useEffect, useState, useTransition } from "react";
 import type { CustomerAddress } from "@/lib/db/schema";

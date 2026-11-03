@@ -1,4 +1,4 @@
-import { and, desc, eq, ilike, or, sql } from "drizzle-orm";
+import { desc, ilike, or, sql } from "drizzle-orm";
 import { Eye, Search, ShoppingBag, UserCheck, Users } from "lucide-react";
 import { headers } from "next/headers";
 import Link from "next/link";

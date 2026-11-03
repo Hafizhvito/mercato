@@ -1,5 +1,5 @@
 import { desc, eq } from "drizzle-orm";
-import { Eye, Package, ShoppingBag } from "lucide-react";
+import { Eye, ShoppingBag } from "lucide-react";
 import { headers } from "next/headers";
 import Link from "next/link";
 import { getTranslations } from "next-intl/server";

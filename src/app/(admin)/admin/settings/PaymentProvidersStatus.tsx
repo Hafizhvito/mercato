@@ -3,21 +3,12 @@ import { CheckCircle2, CreditCard, XCircle } from "lucide-react";
 export function PaymentProvidersStatus() {
   const midtransServerKey = process.env.MIDTRANS_SERVER_KEY || "";
   const midtransClientKey = process.env.NEXT_PUBLIC_MIDTRANS_CLIENT_KEY || "";
-  const midtransMerchantId = process.env.MIDTRANS_MERCHANT_ID || "";
   const midtransIsProduction = process.env.MIDTRANS_IS_PRODUCTION === "true";
-
   const isMidtransConfigured = Boolean(midtransServerKey && midtransClientKey);
 
   const stripeSecretKey = process.env.STRIPE_SECRET_KEY || "";
   const stripePublishableKey = process.env.NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY || "";
   const isStripeConfigured = Boolean(stripeSecretKey && stripePublishableKey);
-
-  // Masking helpers - strictly show only prefixes and asterisks
-  const maskKey = (key: string, prefixLen = 8) => {
-    if (!key) return "Belum Dikonfigurasi";
-    const prefix = key.slice(0, prefixLen);
-    return `${prefix}************************`;
-  };
 
   return (
     <div className="rounded-xl border border-zinc-200 bg-white p-6 shadow-xs space-y-6">
@@ -27,8 +18,8 @@ export function PaymentProvidersStatus() {
           Status Integrasi Gateway Pembayaran (Payment Providers)
         </h3>
         <p className="text-xs text-zinc-500 mt-0.5">
-          Tinjauan read-only status kredensial gateway. Kunci rahasia (secret keys) disamarkan untuk
-          keamanan.
+          Tinjauan ketersediaan gateway pembayaran. Kunci rahasia tidak pernah ditampilkan pada
+          antarmuka pengguna demi keamanan.
         </p>
       </div>
 
@@ -40,35 +31,31 @@ export function PaymentProvidersStatus() {
             {isMidtransConfigured ? (
               <span className="inline-flex items-center gap-1 rounded-full bg-emerald-50 px-2 py-0.5 text-[10px] font-bold text-emerald-700 border border-emerald-200">
                 <CheckCircle2 className="h-3 w-3" />
-                Aktif & Terhubung
+                Aktif (Enabled)
               </span>
             ) : (
               <span className="inline-flex items-center gap-1 rounded-full bg-zinc-100 px-2 py-0.5 text-[10px] font-medium text-zinc-500">
                 <XCircle className="h-3 w-3" />
-                Tidak Aktif
+                Nonaktif (Disabled)
               </span>
             )}
           </div>
 
-          <div className="space-y-1.5 text-zinc-600">
-            <div className="flex justify-between">
-              <span>Mode Operasi:</span>
-              <span className="font-semibold text-zinc-900">
-                {midtransIsProduction ? "Production (Live)" : "Sandbox (Uji Coba)"}
-              </span>
+          <div className="space-y-2 text-zinc-600">
+            <div>
+              <span className="font-semibold text-zinc-900">Alasan / Keterangan:</span>
+              <p className="mt-0.5 text-zinc-600">
+                {isMidtransConfigured
+                  ? `Server Key dan Client Key terkonfigurasi untuk mode ${
+                      midtransIsProduction ? "Production (Live)" : "Sandbox (Uji Coba)"
+                    }. Siap memproses transaksi rupiah (QRIS, VA, GoPay, ShopeePay).`
+                  : "Kredensial Server Key atau Client Key belum diisi di environment. Pembayaran metode lokal tidak dapat diproses."}
+              </p>
             </div>
-            <div className="flex justify-between font-mono">
-              <span>Merchant ID:</span>
-              <span className="text-zinc-900">{midtransMerchantId || "G-MIDTRANS-DEFAULT"}</span>
-            </div>
-            <div className="flex justify-between font-mono">
-              <span>Client Key:</span>
-              <span className="text-zinc-700">{maskKey(midtransClientKey, 14)}</span>
-            </div>
-            <div className="flex justify-between font-mono">
-              <span>Server Key:</span>
-              <span className="text-zinc-700">{maskKey(midtransServerKey, 14)}</span>
-            </div>
+            <p className="text-[11px] text-zinc-500 italic">
+              Catatan: Variabel MIDTRANS_MERCHANT_ID bersifat opsional dan tidak diwajibkan oleh API
+              Midtrans Snap.
+            </p>
           </div>
         </div>
 
@@ -79,30 +66,26 @@ export function PaymentProvidersStatus() {
             {isStripeConfigured ? (
               <span className="inline-flex items-center gap-1 rounded-full bg-emerald-50 px-2 py-0.5 text-[10px] font-bold text-emerald-700 border border-emerald-200">
                 <CheckCircle2 className="h-3 w-3" />
-                Aktif & Terhubung
+                Aktif (Enabled)
               </span>
             ) : (
               <span className="inline-flex items-center gap-1 rounded-full bg-zinc-100 px-2 py-0.5 text-[10px] font-medium text-zinc-500">
                 <XCircle className="h-3 w-3" />
-                Tidak Dikonfigurasi
+                Nonaktif (Disabled)
               </span>
             )}
           </div>
 
-          <div className="space-y-1.5 text-zinc-600">
-            <div className="flex justify-between">
-              <span>Mode Operasi:</span>
-              <span className="font-semibold text-zinc-900">
-                {stripeSecretKey.startsWith("sk_live") ? "Live" : "Test"}
-              </span>
-            </div>
-            <div className="flex justify-between font-mono">
-              <span>Publishable Key:</span>
-              <span className="text-zinc-700">{maskKey(stripePublishableKey, 10)}</span>
-            </div>
-            <div className="flex justify-between font-mono">
-              <span>Secret Key:</span>
-              <span className="text-zinc-700">{maskKey(stripeSecretKey, 10)}</span>
+          <div className="space-y-2 text-zinc-600">
+            <div>
+              <span className="font-semibold text-zinc-900">Alasan / Keterangan:</span>
+              <p className="mt-0.5 text-zinc-600">
+                {isStripeConfigured
+                  ? `Secret Key dan Publishable Key terkonfigurasi untuk mode ${
+                      stripeSecretKey.startsWith("sk_live") ? "Live" : "Test"
+                    }. Siap memproses pembayaran kartu kredit/debit internasional.`
+                  : "Secret Key atau Publishable Key belum dikonfigurasi di environment. Pembayaran internasional dinonaktifkan."}
+              </p>
             </div>
           </div>
         </div>
