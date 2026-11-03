@@ -293,7 +293,7 @@ describe("Phase 5: Comprehensive Role-Based Authorization & Multi-Tenant IDOR Ma
         storeId: storeAId,
         userId: null,
         userRole: null,
-        token: "forged-guest-token",
+        token: "invalid-tok",
       });
 
       expect(accessResult.authorized).toBe(false);

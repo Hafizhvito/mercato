@@ -5,10 +5,10 @@ describe("Audit Log Privacy & Sanitization Guard", () => {
   it("removes passwords, secret keys, tokens, and API credentials from details", () => {
     const rawDetails = {
       orderNumber: "MRC-123456",
-      adminPassword: "SuperSecretPassword123!",
-      apiToken: "tok_live_1234567890",
-      serverKey: "SB-Mid-server-secret",
-      providerSecret: "whsec_sample_secret",
+      adminPassword: "test-password",
+      apiToken: "test-token",
+      serverKey: "test-key",
+      providerSecret: "test-secret",
       status: "paid",
     };
 
