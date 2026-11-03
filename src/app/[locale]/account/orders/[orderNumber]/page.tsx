@@ -61,7 +61,7 @@ export default async function CustomerOrderDetailPage({ params }: Props) {
             {t("orderNumber")} #{order.orderNumber}
           </h2>
           <p className="text-[11px] text-zinc-500">
-            {new Date(order.createdAt).toLocaleDateString("id-ID", {
+            {new Date(order.createdAt).toLocaleString("id-ID", {
               dateStyle: "full",
               timeStyle: "short",
             })}
@@ -187,6 +187,20 @@ export default async function CustomerOrderDetailPage({ params }: Props) {
                 <span>{t("shipping")}</span>
                 <span className="font-medium text-zinc-900">{formattedShipping}</span>
               </div>
+              {order.discountAmount > 0 && (
+                <div className="flex justify-between text-emerald-600 font-medium">
+                  <span>Diskon</span>
+                  <span>-{formatMoney(createMoney(order.discountAmount, order.currency))}</span>
+                </div>
+              )}
+              {order.taxAmount > 0 && (
+                <div className="flex justify-between">
+                  <span>Pajak (PPN)</span>
+                  <span className="font-medium text-zinc-900">
+                    {formatMoney(createMoney(order.taxAmount, order.currency))}
+                  </span>
+                </div>
+              )}
               <div className="border-t border-zinc-200 pt-2 flex justify-between font-bold text-sm text-zinc-950">
                 <span>{t("total")}</span>
                 <span>{formattedTotal}</span>

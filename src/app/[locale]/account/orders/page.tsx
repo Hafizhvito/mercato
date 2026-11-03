@@ -74,7 +74,7 @@ export default async function AccountOrdersPage({ params }: Props) {
                     )}
                   </div>
                   <div className="text-zinc-500">
-                    {new Date(order.createdAt).toLocaleDateString("id-ID", {
+                    {new Date(order.createdAt).toLocaleString("id-ID", {
                       dateStyle: "medium",
                       timeStyle: "short",
                     })}

@@ -100,7 +100,8 @@ export function EmailTemplatesPreview() {
   const [selectedId, setSelectedId] = useState(TEMPLATES[0]?.id);
   const [previewLocale, setPreviewLocale] = useState<"id" | "en">("id");
 
-  const currentTemplate = TEMPLATES.find((t) => t.id === selectedId) || TEMPLATES[0]!;
+  const currentTemplate = TEMPLATES.find((t) => t.id === selectedId) || TEMPLATES[0];
+  if (!currentTemplate) return null;
 
   return (
     <div className="rounded-xl border border-zinc-200 bg-white p-6 shadow-xs space-y-6">

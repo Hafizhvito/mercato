@@ -36,6 +36,7 @@ export interface EmailService {
     to: string;
     orderNumber: string;
     totalAmountFormatted: string;
+    taxAmountFormatted?: string;
     orderUrl?: string;
     locale?: string;
   }): Promise<void>;
@@ -124,6 +125,7 @@ export class ConsoleEmailService implements EmailService {
     to: string;
     orderNumber: string;
     totalAmountFormatted: string;
+    taxAmountFormatted?: string;
     orderUrl?: string;
     locale?: string;
   }): Promise<void> {
@@ -137,6 +139,7 @@ export class ConsoleEmailService implements EmailService {
         `To: ${options.to}\n` +
         `Order Number: ${options.orderNumber}\n` +
         `Locale: ${options.locale ?? "id"}\n` +
+        (options.taxAmountFormatted ? `Tax: ${options.taxAmountFormatted}\n` : "") +
         `Total: ${options.totalAmountFormatted}\n` +
         `Order URL: ${options.orderUrl ?? "N/A"}\n` +
         "=======================================================\n",
@@ -234,7 +237,6 @@ export class ConsoleEmailService implements EmailService {
         `To: ${options.to}\n` +
         `Role: ${options.role}\n` +
         `Invite URL: ${options.inviteUrl}\n` +
-        `Token: ${options.token}\n` +
         `Expires At: ${options.expiresAt.toISOString()}\n` +
         "=======================================================\n",
     );
@@ -321,6 +323,7 @@ export class ResendEmailService implements EmailService {
     to: string;
     orderNumber: string;
     totalAmountFormatted: string;
+    taxAmountFormatted?: string;
     orderUrl?: string;
     locale?: string;
   }): Promise<void> {
@@ -333,6 +336,7 @@ export class ResendEmailService implements EmailService {
         react: React.createElement(OrderConfirmationEmail, {
           orderNumber: options.orderNumber,
           totalAmountFormatted: options.totalAmountFormatted,
+          taxAmountFormatted: options.taxAmountFormatted,
           orderUrl: options.orderUrl,
           locale: options.locale ?? "id",
         }),
@@ -471,7 +475,6 @@ export class ResendEmailService implements EmailService {
         `To: ${options.to}\n` +
         `Role: ${options.role}\n` +
         `Invite URL: ${options.inviteUrl}\n` +
-        `Token: ${options.token}\n` +
         `Expires At: ${options.expiresAt.toISOString()}\n` +
         "=======================================================\n",
     );

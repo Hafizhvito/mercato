@@ -18,10 +18,13 @@ process.env.MIDTRANS_IS_PRODUCTION = "false";
 process.env.STRIPE_SECRET_KEY = "sk_test_fake_key_123";
 process.env.STRIPE_WEBHOOK_SECRET = "whsec_fake_webhook_123";
 
+let lastSnapPayload: any = null;
+
 // MSW Server for mocking external payment gateway APIs
 const server = setupServer(
   // Midtrans Snap transaction creation
-  http.post("https://app.sandbox.midtrans.com/snap/v1/transactions", async () => {
+  http.post("https://app.sandbox.midtrans.com/snap/v1/transactions", async ({ request }) => {
+    lastSnapPayload = await request.json();
     const token = `snap-token-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`;
     return HttpResponse.json({
       token,
@@ -628,5 +631,112 @@ describe("Phase 4 Payments, Webhooks, Integrity, & Refunds Suite", () => {
     } finally {
       midtransProvider.getPaymentStatus = origGetPaymentStatus;
     }
+  });
+
+  it("9. Midtrans Adapter Request Builder: Gross Amount equals Order Total and sum(item_details) with Tax, Discount, and Shipping", async () => {
+    // Test Case 1: Tax exclusive (11%)
+    // Order: Subtotal 100,000, Discount 10,000, Shipping 15,000, Tax 9,900 -> Total 114,900
+    const [taxExclusiveOrder] = await db
+      .insert(schema.orders)
+      .values({
+        orderNumber: `ORD-TAX-EXC-${Date.now()}`,
+        storeId,
+        guestEmail: "tax-exclusive@example.com",
+        status: "pending",
+        currency: "IDR",
+        subtotal: 100000,
+        discountAmount: 10000,
+        shippingAmount: 15000,
+        taxAmount: 9900,
+        totalAmount: 114900,
+        shippingCarrier: "JNE",
+        shippingService: "REG",
+        shippingAddress: mockAddress,
+        guestAccessToken: "token-tax-exc",
+        paymentProvider: "midtrans",
+        idempotencyKey: `idem-tax-exc-${Date.now()}`,
+        checkoutSessionId: `cs-tax-exc-${Date.now()}`,
+      })
+      .returning();
+
+    const orderItems1 = [
+      {
+        id: "item-tax-1",
+        orderId: taxExclusiveOrder!.id,
+        productId: testProductId,
+        variantId: testVariantId,
+        productName: "Taxable Item",
+        variantTitle: "Default",
+        sku: "TAX-1",
+        unitPrice: 100000,
+        quantity: 1,
+        totalPrice: 100000,
+        createdAt: new Date(),
+      },
+    ];
+
+    const session1 = await midtransPaymentProvider.createPaymentSession(
+      taxExclusiveOrder!,
+      orderItems1,
+    );
+    expect(session1.clientToken).toBeDefined();
+
+    expect(lastSnapPayload).toBeDefined();
+    expect(lastSnapPayload.transaction_details.gross_amount).toBe(taxExclusiveOrder!.totalAmount);
+
+    const sumDetails1 = lastSnapPayload.item_details.reduce(
+      (sum: number, it: any) => sum + it.price * it.quantity,
+      0,
+    );
+    expect(sumDetails1).toBe(lastSnapPayload.transaction_details.gross_amount);
+
+    // Verify individual line items exist
+    expect(
+      lastSnapPayload.item_details.some((it: any) => it.id === "TAX" && it.price === 9900),
+    ).toBe(true);
+    expect(
+      lastSnapPayload.item_details.some((it: any) => it.id === "DISCOUNT" && it.price === -10000),
+    ).toBe(true);
+    expect(
+      lastSnapPayload.item_details.some((it: any) => it.id === "SHIPPING" && it.price === 15000),
+    ).toBe(true);
+
+    // Test Case 2: Tax inclusive (11% included in prices)
+    // Subtotal 100,000, Discount 10,000, Shipping 15,000 -> Total 105,000
+    const [taxInclusiveOrder] = await db
+      .insert(schema.orders)
+      .values({
+        orderNumber: `ORD-TAX-INC-${Date.now()}`,
+        storeId,
+        guestEmail: "tax-inclusive@example.com",
+        status: "pending",
+        currency: "IDR",
+        subtotal: 100000,
+        discountAmount: 10000,
+        shippingAmount: 15000,
+        taxAmount: 8919, // extracted from taxable subtotal 90,000
+        totalAmount: 105000,
+        shippingCarrier: "JNE",
+        shippingService: "REG",
+        shippingAddress: mockAddress,
+        guestAccessToken: "token-tax-inc",
+        paymentProvider: "midtrans",
+        idempotencyKey: `idem-tax-inc-${Date.now()}`,
+        checkoutSessionId: `cs-tax-inc-${Date.now()}`,
+      })
+      .returning();
+
+    const session2 = await midtransPaymentProvider.createPaymentSession(
+      taxInclusiveOrder!,
+      orderItems1,
+    );
+    expect(session2.clientToken).toBeDefined();
+
+    expect(lastSnapPayload.transaction_details.gross_amount).toBe(taxInclusiveOrder!.totalAmount);
+    const sumDetails2 = lastSnapPayload.item_details.reduce(
+      (sum: number, it: any) => sum + it.price * it.quantity,
+      0,
+    );
+    expect(sumDetails2).toBe(lastSnapPayload.transaction_details.gross_amount);
   });
 });

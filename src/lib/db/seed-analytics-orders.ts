@@ -1,4 +1,4 @@
-import { eq } from "drizzle-orm";
+import { and, eq, sql } from "drizzle-orm";
 import { db } from "@/lib/db";
 import * as schema from "@/lib/db/schema";
 import { assertSafeTarget } from "@/lib/db/script-safety";
@@ -31,6 +31,28 @@ export async function seedAnalyticsOrders() {
   const [store] = await db.select().from(schema.stores).limit(1);
   if (!store) {
     throw new Error("No store found. Please run catalog seed first.");
+  }
+
+  // Idempotency: Tag fake orders with 'MRC-SIM-' prefix and clean prior fake orders
+  const existingSim = await db
+    .select({ id: schema.orders.id })
+    .from(schema.orders)
+    .where(
+      and(eq(schema.orders.storeId, store.id), sql`${schema.orders.orderNumber} LIKE 'MRC-SIM-%'`),
+    );
+
+  if (existingSim.length > 0) {
+    console.log(
+      `[SEED ANALYTICS]: Found ${existingSim.length} existing demo orders (prefix 'MRC-SIM-'). Cleaning prior demo orders to ensure clean idempotency...`,
+    );
+    await db
+      .delete(schema.orders)
+      .where(
+        and(
+          eq(schema.orders.storeId, store.id),
+          sql`${schema.orders.orderNumber} LIKE 'MRC-SIM-%'`,
+        ),
+      );
   }
 
   const variants = await db

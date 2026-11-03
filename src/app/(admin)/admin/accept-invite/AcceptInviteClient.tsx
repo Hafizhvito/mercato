@@ -3,6 +3,7 @@
 import { AlertCircle, CheckCircle2, KeyRound, Loader2, ShieldCheck } from "lucide-react";
 import Link from "next/link";
 import { useState, useTransition } from "react";
+import { validatePasswordStrength } from "@/lib/auth/password-policy";
 import { acceptStaffInviteAction } from "@/modules/settings/actions";
 
 interface Props {
@@ -27,8 +28,9 @@ export function AcceptInviteClient({ token, email, role }: Props) {
       setError("Konfirmasi kata sandi tidak cocok.");
       return;
     }
-    if (password.length < 8) {
-      setError("Kata sandi minimal 8 karakter.");
+    const check = validatePasswordStrength(password);
+    if (!check.valid) {
+      setError(check.errors[0] || "Kata sandi tidak memenuhi kebijakan keamanan.");
       return;
     }
 
@@ -111,13 +113,13 @@ export function AcceptInviteClient({ token, email, role }: Props) {
 
             <div>
               <label htmlFor="staff-password" className="block font-semibold text-zinc-700 mb-1">
-                Kata Sandi Baru (Minimal 8 Karakter)
+                Kata Sandi Baru (Minimal 12 Karakter, Huruf Besar, Kecil, Angka & Simbol)
               </label>
               <input
                 id="staff-password"
                 type="password"
                 required
-                minLength={8}
+                minLength={12}
                 value={password}
                 onChange={(e) => setPassword(e.target.value)}
                 className="w-full rounded-xl border border-zinc-200 px-3 py-2 text-zinc-900 focus:border-zinc-900 focus:outline-hidden"

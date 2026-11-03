@@ -6,10 +6,16 @@ import { and, count, eq } from "drizzle-orm";
 import { revalidatePath } from "next/cache";
 import { headers } from "next/headers";
 import { auth } from "@/lib/auth";
+import { validatePasswordStrength } from "@/lib/auth/password-policy";
+import { authRateLimiter } from "@/lib/cache/ratelimit";
 import { db } from "@/lib/db";
 import * as schema from "@/lib/db/schema";
 import { emailService } from "@/lib/email";
 import { assertPermission, assertStaffModificationAllowed, type UserRole } from "@/server/guards";
+
+function hashInviteToken(rawToken: string): string {
+  return crypto.createHash("sha256").update(rawToken.trim()).digest("hex");
+}
 
 async function getAuthenticatedUser() {
   const reqHeaders = await headers();
@@ -115,13 +121,15 @@ export async function inviteStaffAction(input: { email: string; role: "staff" | 
         ),
       );
 
+    const tokenHash = hashInviteToken(token);
+
     const [created] = await tx
       .insert(schema.staffInvitations)
       .values({
         storeId: store.id,
         email: trimmedEmail,
         role: input.role,
-        token,
+        token: tokenHash, // Store SHA-256 hashed token, never plaintext
         invitedBy: user.id,
         expiresAt,
       })
@@ -168,10 +176,11 @@ export async function getStaffInviteAction(token: string) {
     return { valid: false, error: "Token undangan tidak valid." };
   }
 
+  const tokenHash = hashInviteToken(token);
   const [invite] = await db
     .select()
     .from(schema.staffInvitations)
-    .where(eq(schema.staffInvitations.token, token.trim()))
+    .where(eq(schema.staffInvitations.token, tokenHash))
     .limit(1);
 
   if (!invite) {
@@ -203,15 +212,30 @@ export async function acceptStaffInviteAction(input: {
 
   if (!token) throw new Error("Token undangan wajib disertakan.");
   if (!name || name.length < 2) throw new Error("Nama minimal 2 karakter.");
-  if (!password || password.length < 8) {
-    throw new Error("Password minimal 8 karakter.");
+
+  const passCheck = validatePasswordStrength(password);
+  if (!passCheck.valid) {
+    throw new Error(
+      passCheck.errors[0] ||
+        "Password minimal 12 karakter dan kombinasi huruf kapital, kecil, angka, serta simbol.",
+    );
   }
+
+  // Rate limit invite acceptance attempts
+  const rateLimitRes = await authRateLimiter.limit(`invite-accept:${token}`);
+  if (!rateLimitRes.success) {
+    throw new Error(
+      "Terlalu banyak percobaan penerimaan undangan. Silakan coba lagi beberapa saat.",
+    );
+  }
+
+  const tokenHash = hashInviteToken(token);
 
   return await db.transaction(async (tx) => {
     const [invite] = await tx
       .select()
       .from(schema.staffInvitations)
-      .where(eq(schema.staffInvitations.token, token))
+      .where(eq(schema.staffInvitations.token, tokenHash))
       .limit(1);
 
     if (!invite) {
@@ -230,6 +254,10 @@ export async function acceptStaffInviteAction(input: {
       .from(schema.user)
       .where(eq(schema.user.email, invite.email))
       .limit(1);
+
+    if (existingUser && existingUser.role === "owner") {
+      throw new Error("Akun pemilik toko (owner) tidak dapat diubah melalui undangan.");
+    }
 
     let userId: string;
     if (existingUser) {

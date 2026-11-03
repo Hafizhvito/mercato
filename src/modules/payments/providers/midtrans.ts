@@ -56,6 +56,13 @@ export class MidtransPaymentProvider implements PaymentProvider {
       throw new Error("Midtrans payment provider is not configured. Server key is missing.");
     }
 
+    // Calculate difference between gross total and items/shipping/discount to include tax line
+    const itemsSum =
+      items.reduce((acc, i) => acc + i.unitPrice * i.quantity, 0) +
+      (order.shippingAmount || 0) -
+      (order.discountAmount || 0);
+    const taxDifference = order.totalAmount - itemsSum;
+
     const payload = {
       transaction_details: {
         order_id: order.orderNumber,
@@ -79,7 +86,7 @@ export class MidtransPaymentProvider implements PaymentProvider {
                 id: "SHIPPING",
                 price: order.shippingAmount,
                 quantity: 1,
-                name: `Shipping (${order.shippingCarrier})`,
+                name: `Shipping (${order.shippingCarrier})`.slice(0, 50),
               },
             ]
           : []),
@@ -89,7 +96,17 @@ export class MidtransPaymentProvider implements PaymentProvider {
                 id: "DISCOUNT",
                 price: -order.discountAmount,
                 quantity: 1,
-                name: "Discount Coupon",
+                name: "Discount Coupon".slice(0, 50),
+              },
+            ]
+          : []),
+        ...(taxDifference > 0
+          ? [
+              {
+                id: "TAX",
+                price: taxDifference,
+                quantity: 1,
+                name: "Pajak (Tax)".slice(0, 50),
               },
             ]
           : []),

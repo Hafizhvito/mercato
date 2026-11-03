@@ -229,9 +229,11 @@ export class OrderService {
 
       if (taxRatePercent > 0) {
         if (isTaxInclusive) {
-          taxAmount = Math.round(taxableSubtotal - taxableSubtotal / (1 + taxRatePercent / 100));
+          // Integer arithmetic: extract tax included in prices
+          taxAmount = Math.round((taxableSubtotal * taxRatePercent) / (100 + taxRatePercent));
         } else {
-          taxAmount = Math.round(taxableSubtotal * (taxRatePercent / 100));
+          // Integer arithmetic: add tax on top of prices
+          taxAmount = Math.round((taxableSubtotal * taxRatePercent) / 100);
         }
       }
 

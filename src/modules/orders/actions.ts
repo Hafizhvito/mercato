@@ -111,11 +111,20 @@ export async function submitCheckoutAction(input: {
       currency: result.order.currency,
     }).format(result.order.totalAmount);
 
+    const formattedTax =
+      result.order.taxAmount > 0
+        ? new Intl.NumberFormat("id-ID", {
+            style: "currency",
+            currency: result.order.currency,
+          }).format(result.order.taxAmount)
+        : undefined;
+
     emailService
       .sendOrderConfirmationEmail({
         to: emailTo,
         orderNumber: result.order.orderNumber,
         totalAmountFormatted: formattedTotal,
+        taxAmountFormatted: formattedTax,
         orderUrl: `${process.env.NEXT_PUBLIC_APP_URL || "http://localhost:3000"}/orders/${result.order.orderNumber}?token=${result.order.guestAccessToken}`,
       })
       .catch((err) => {

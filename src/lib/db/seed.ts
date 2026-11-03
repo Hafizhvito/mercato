@@ -2,6 +2,7 @@ import crypto from "node:crypto";
 import { hashPassword } from "better-auth/crypto";
 import { and, eq } from "drizzle-orm";
 import { auth } from "@/lib/auth";
+import { validatePasswordStrength } from "@/lib/auth/password-policy";
 import { db } from "@/lib/db";
 import * as schema from "@/lib/db/schema";
 import { env } from "@/lib/env";
@@ -42,21 +43,12 @@ async function main() {
   }
 
   // Enforce password strength: at least 12 characters and mixed character classes
-  if (adminPassword.length < 12) {
+  const passwordCheck = validatePasswordStrength(adminPassword);
+  if (!passwordCheck.valid) {
     console.error(
-      "\nValidation Error: SEED_ADMIN_PASSWORD must be at least 12 characters in length.\n",
-    );
-    process.exit(1);
-  }
-
-  const hasUpper = /[A-Z]/.test(adminPassword);
-  const hasLower = /[a-z]/.test(adminPassword);
-  const hasNumber = /[0-9]/.test(adminPassword);
-  const hasSymbol = /[^A-Za-z0-9]/.test(adminPassword);
-
-  if (!hasUpper || !hasLower || !hasNumber || !hasSymbol) {
-    console.error(
-      "\nValidation Error: SEED_ADMIN_PASSWORD must contain mixed character classes (uppercase, lowercase, numbers, and symbols).\n",
+      `\nValidation Error: SEED_ADMIN_PASSWORD does not meet security requirements:\n` +
+        passwordCheck.errors.map((e) => `  - ${e}`).join("\n") +
+        "\n",
     );
     process.exit(1);
   }

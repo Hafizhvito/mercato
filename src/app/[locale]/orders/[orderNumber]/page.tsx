@@ -168,6 +168,14 @@ export default async function OrderConfirmationPage({ params, searchParams }: Pr
                     <span>-{formattedDiscount}</span>
                   </div>
                 )}
+                {order.taxAmount > 0 && (
+                  <div className="flex justify-between text-zinc-600">
+                    <span>Pajak (PPN)</span>
+                    <span className="font-medium text-zinc-900">
+                      {formatMoney(createMoney(order.taxAmount, order.currency))}
+                    </span>
+                  </div>
+                )}
                 <div className="border-t border-zinc-200 pt-3 flex justify-between text-sm font-bold text-zinc-950">
                   <span>{t("total")}</span>
                   <span>{formattedTotal}</span>

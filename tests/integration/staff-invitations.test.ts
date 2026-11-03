@@ -1,9 +1,14 @@
+import crypto from "node:crypto";
 import { eq } from "drizzle-orm";
 import { beforeAll, describe, expect, it } from "vitest";
 import { db } from "@/lib/db";
 import * as schema from "@/lib/db/schema";
 import { acceptStaffInviteAction, getStaffInviteAction } from "@/modules/settings/actions";
 import { assertStaffModificationAllowed } from "@/server/guards";
+
+function hashInviteToken(token: string): string {
+  return crypto.createHash("sha256").update(token).digest("hex");
+}
 
 describe("Phase 5: Staff Invite Flow & Governance Integration Suite", () => {
   let storeId: string;
@@ -55,12 +60,12 @@ describe("Phase 5: Staff Invite Flow & Governance Integration Suite", () => {
     const inviteEmail = `newstaff-${Date.now()}@example.test`;
     const expiresAt = new Date(Date.now() + 48 * 60 * 60 * 1000); // 48h
 
-    // Insert invitation
+    // Insert invitation with SHA-256 hashed token
     await db.insert(schema.staffInvitations).values({
       storeId,
       email: inviteEmail,
       role: "staff",
-      token: inviteToken,
+      token: hashInviteToken(inviteToken),
       invitedBy: ownerUserId,
       expiresAt,
     });
@@ -122,7 +127,7 @@ describe("Phase 5: Staff Invite Flow & Governance Integration Suite", () => {
       storeId,
       email: expiredEmail,
       role: "staff",
-      token: expiredToken,
+      token: hashInviteToken(expiredToken),
       invitedBy: ownerUserId,
       expiresAt: expiredDate,
     });
@@ -163,6 +168,106 @@ describe("Phase 5: Staff Invite Flow & Governance Integration Suite", () => {
         ownerCount: 1,
       }),
     ).toThrow("Permission denied: Admins cannot modify, demote, or disable store owners");
+  });
+
+  it("enforces shared password policy (min 12 chars, upper, lower, number, symbol) on acceptance", async () => {
+    const inviteToken = `token-policy-${Date.now()}`;
+    const inviteEmail = `weakpass-${Date.now()}@example.test`;
+
+    await db.insert(schema.staffInvitations).values({
+      storeId,
+      email: inviteEmail,
+      role: "staff",
+      token: hashInviteToken(inviteToken),
+      invitedBy: ownerUserId,
+      expiresAt: new Date(Date.now() + 3600000),
+    });
+
+    // Too short (<12 chars)
+    await expect(
+      acceptStaffInviteAction({
+        token: inviteToken,
+        name: "Policy Tester",
+        password: "Short1!",
+      }),
+    ).rejects.toThrow("Password must be at least 12 characters in length.");
+
+    // Missing symbol
+    await expect(
+      acceptStaffInviteAction({
+        token: inviteToken,
+        name: "Policy Tester",
+        password: "NoSymbolPassword1234",
+      }),
+    ).rejects.toThrow("Password must contain at least one special character or symbol.");
+  });
+
+  it("safely handles invitation for existing customer account (elevates to staff)", async () => {
+    const existingEmail = `existing-cust-${Date.now()}@example.test`;
+    const [existingCust] = await db
+      .insert(schema.user)
+      .values({
+        id: `usr-exist-${Date.now()}`,
+        name: "Existing Customer",
+        email: existingEmail,
+        role: "customer",
+        emailVerified: true,
+      })
+      .returning();
+
+    const inviteToken = `token-exist-${Date.now()}`;
+    await db.insert(schema.staffInvitations).values({
+      storeId,
+      email: existingEmail,
+      role: "staff",
+      token: hashInviteToken(inviteToken),
+      invitedBy: ownerUserId,
+      expiresAt: new Date(Date.now() + 3600000),
+    });
+
+    const res = await acceptStaffInviteAction({
+      token: inviteToken,
+      name: "Existing Customer Turned Staff",
+      password: "NewStaffPassword2026!",
+    });
+
+    expect(res.success).toBe(true);
+    const [updatedUser] = await db
+      .select()
+      .from(schema.user)
+      .where(eq(schema.user.id, existingCust!.id))
+      .limit(1);
+
+    expect(updatedUser?.role).toBe("staff");
+  });
+
+  it("safely rejects invitation acceptance if target email belongs to store owner", async () => {
+    const ownerEmail = `existing-owner-${Date.now()}@example.test`;
+    await db.insert(schema.user).values({
+      id: `usr-ex-owner-${Date.now()}`,
+      name: "Store Owner User",
+      email: ownerEmail,
+      role: "owner",
+      emailVerified: true,
+    });
+
+    const inviteToken = `token-owner-${Date.now()}`;
+    await db.insert(schema.staffInvitations).values({
+      storeId,
+      email: ownerEmail,
+      role: "staff",
+      token: hashInviteToken(inviteToken),
+      invitedBy: ownerUserId,
+      expiresAt: new Date(Date.now() + 3600000),
+    });
+
+    await expect(
+      acceptStaffInviteAction({
+        token: inviteToken,
+        name: "Owner Demote Attempt",
+        password: "NewStaffPassword2026!",
+      }),
+    ).rejects.toThrow("Akun pemilik toko (owner) tidak dapat diubah melalui undangan");
   });
 
   it("enforces self-role governance: user cannot change their own administrative role", () => {

@@ -48,14 +48,14 @@ export default async function AdminCustomersPage({ searchParams }: Props) {
       totalOrders: sql<number>`
         (SELECT COUNT(o.id)
          FROM ${schema.orders} o
-         WHERE o.customer_id = ${schema.user.id}
+         WHERE o.customer_id = "user"."id"
         )::int
       `,
       totalSpent: sql<number>`
         COALESCE(
           (SELECT SUM(o.total_amount)
            FROM ${schema.orders} o
-           WHERE o.customer_id = ${schema.user.id}
+           WHERE o.customer_id = "user"."id"
              AND o.status IN ('paid', 'processing', 'shipped', 'delivered')),
           0
         )::int

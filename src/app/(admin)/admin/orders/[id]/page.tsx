@@ -163,6 +163,22 @@ export default async function AdminOrderDetailPage({ params }: Props) {
                 </span>
                 <span className="font-medium text-zinc-900">{formattedShipping}</span>
               </div>
+              {order.discountAmount > 0 && (
+                <div className="flex justify-between text-emerald-600">
+                  <span>Potongan Diskon</span>
+                  <span className="font-medium">
+                    -{formatMoney(createMoney(order.discountAmount, order.currency))}
+                  </span>
+                </div>
+              )}
+              {order.taxAmount > 0 && (
+                <div className="flex justify-between text-zinc-600">
+                  <span>Pajak (PPN)</span>
+                  <span className="font-medium text-zinc-900">
+                    {formatMoney(createMoney(order.taxAmount, order.currency))}
+                  </span>
+                </div>
+              )}
               {order.shippingTrackingNumber && (
                 <div className="flex justify-between text-zinc-600 font-mono">
                   <span>Nomor Resi</span>
