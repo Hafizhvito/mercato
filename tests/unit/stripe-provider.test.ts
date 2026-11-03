@@ -73,7 +73,8 @@ describe("Stripe Line Items Builder: Tax Exclusive and Inclusive Modes", () => {
     ];
 
     let capturedParams: any = null;
-    process.env.STRIPE_SECRET_KEY = "sk_test_1234567890abcdef";
+    process.env.STRIPE_SECRET_KEY = "mock-stripe-secret-test-key";
+    const availSpy = vi.spyOn(stripePaymentProvider, "isAvailable").mockReturnValue(true);
     (stripePaymentProvider as any).stripeClient = {
       checkout: {
         sessions: {
@@ -91,6 +92,7 @@ describe("Stripe Line Items Builder: Tax Exclusive and Inclusive Modes", () => {
 
     const session = await stripePaymentProvider.createPaymentSession(mockOrder, mockItems);
     expect(session.providerSessionId).toBe("cs_test_123");
+    availSpy.mockRestore();
 
     const lineItems = capturedParams.line_items;
     const totalLineItemsSum = lineItems.reduce(
@@ -153,7 +155,8 @@ describe("Stripe Line Items Builder: Tax Exclusive and Inclusive Modes", () => {
     ];
 
     let capturedParams: any = null;
-    process.env.STRIPE_SECRET_KEY = "sk_test_1234567890abcdef";
+    process.env.STRIPE_SECRET_KEY = "mock-stripe-secret-test-key";
+    const availSpy = vi.spyOn(stripePaymentProvider, "isAvailable").mockReturnValue(true);
     (stripePaymentProvider as any).stripeClient = {
       checkout: {
         sessions: {
@@ -171,6 +174,7 @@ describe("Stripe Line Items Builder: Tax Exclusive and Inclusive Modes", () => {
 
     const session = await stripePaymentProvider.createPaymentSession(mockOrder, mockItems);
     expect(session.providerSessionId).toBe("cs_test_456");
+    availSpy.mockRestore();
 
     const lineItems = capturedParams.line_items;
     const totalLineItemsSum = lineItems.reduce(

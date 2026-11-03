@@ -2,4 +2,9 @@
 eb195ed6a94571f49e16463b27692e31e777f0d4:README.md:generic-api-key:170
 # Test fixture dummy value in tests/unit/audit-log-privacy.test.ts from commit 2cd7a46
 2cd7a46e13b2a0dc724fbd0af8b86210395c53f8:tests/unit/audit-log-privacy.test.ts:generic-api-key:9
+# Test fixture dummy value in tests/unit/stripe-provider.test.ts from commit ea8475f
+ea8475f6be1bd8c1781bab3be43548b61a5d3391:tests/unit/stripe-provider.test.ts:stripe-api-key:76
+ea8475f6be1bd8c1781bab3be43548b61a5d3391:tests/unit/stripe-provider.test.ts:stripe-api-key:156
+ea8475f6be1bd8c1781bab3be43548b61a5d3391:tests/unit/stripe-provider.test.ts:generic-api-key:76
+ea8475f6be1bd8c1781bab3be43548b61a5d3391:tests/unit/stripe-provider.test.ts:generic-api-key:156
 
