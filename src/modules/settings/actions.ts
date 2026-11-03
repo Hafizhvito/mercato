@@ -104,7 +104,7 @@ export async function inviteStaffAction(input: { email: string; role: "staff" | 
   const token = crypto.randomBytes(32).toString("hex");
   const expiresAt = new Date(Date.now() + 48 * 60 * 60 * 1000); // 48 hour TTL
 
-  const [invitation] = await db.transaction(async (tx) => {
+  const invitation = await db.transaction(async (tx) => {
     // Invalidate prior pending invitations for this email
     await tx
       .delete(schema.staffInvitations)
