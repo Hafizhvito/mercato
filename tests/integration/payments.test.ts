@@ -738,5 +738,8 @@ describe("Phase 4 Payments, Webhooks, Integrity, & Refunds Suite", () => {
       0,
     );
     expect(sumDetails2).toBe(lastSnapPayload.transaction_details.gross_amount);
+
+    // Verify tax is NOT added as a separate line item (already included in unit prices)
+    expect(lastSnapPayload.item_details.some((it: any) => it.id === "TAX")).toBe(false);
   });
 });

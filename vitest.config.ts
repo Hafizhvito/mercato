@@ -9,6 +9,8 @@ export default defineConfig({
   test: {
     environment: "node",
     globals: true,
+    fileParallelism: false,
+    testTimeout: 15000,
     setupFiles: ["./tests/setup.ts"],
     env: {
       BETTER_AUTH_URL: "http://localhost:3000",

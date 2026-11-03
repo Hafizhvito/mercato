@@ -106,6 +106,24 @@ export async function inviteStaffAction(input: { email: string; role: "staff" | 
     throw new Error("Invalid email address.");
   }
 
+  // Check if an account already exists for this email to prevent silent elevation or password overwrite
+  const [existingUser] = await db
+    .select({ id: schema.user.id, role: schema.user.role })
+    .from(schema.user)
+    .where(eq(schema.user.email, trimmedEmail))
+    .limit(1);
+
+  if (existingUser) {
+    if (existingUser.role === "owner") {
+      throw new Error(
+        "Akun pemilik toko (owner) tidak dapat diundang atau diubah melalui undangan.",
+      );
+    }
+    throw new Error(
+      `Pengguna dengan email '${trimmedEmail}' sudah terdaftar dengan peran '${existingUser.role}'. Akun yang sudah ada tidak dapat diundang melalui tautan; ubah perannya secara langsung melalui Pengaturan Staff.`,
+    );
+  }
+
   const [store] = await db.select({ id: schema.stores.id }).from(schema.stores).limit(1);
   if (!store) throw new Error("No configured store found.");
 
@@ -251,69 +269,45 @@ export async function acceptStaffInviteAction(input: {
       throw new Error("Undangan telah kedaluwarsa.");
     }
 
-    // Check if user already exists
+    // Strict Security Guard: Check if an account already exists for this email
+    // Invites must NEVER silently elevate or overwrite an existing account's password.
     const [existingUser] = await tx
       .select()
       .from(schema.user)
       .where(eq(schema.user.email, invite.email))
       .limit(1);
 
-    if (existingUser && existingUser.role === "owner") {
-      throw new Error("Akun pemilik toko (owner) tidak dapat diubah melalui undangan.");
+    if (existingUser) {
+      if (existingUser.role === "owner") {
+        throw new Error("Akun pemilik toko (owner) tidak dapat diubah melalui undangan.");
+      }
+      throw new Error(
+        `Akun dengan email '${invite.email}' sudah terdaftar (${existingUser.role}). Untuk mencegah pengambilalihan akun atau perubahan peran tanpa izin, akun yang sudah ada tidak dapat diubah perannya atau ditimpa kata sandinya melalui tautan undangan. Kelola peran akun melalui Pengaturan Staff.`,
+      );
     }
 
-    let userId: string;
-    if (existingUser) {
-      userId = existingUser.id;
-      await tx
-        .update(schema.user)
-        .set({
-          name,
-          role: invite.role,
-          emailVerified: true,
-          updatedAt: new Date(),
-        })
-        .where(eq(schema.user.id, existingUser.id));
-    } else {
-      userId = `usr_${Date.now()}_${crypto.randomBytes(4).toString("hex")}`;
-      await tx.insert(schema.user).values({
-        id: userId,
-        name,
-        email: invite.email,
-        role: invite.role,
-        emailVerified: true,
-        createdAt: new Date(),
-        updatedAt: new Date(),
-      });
-    }
+    const userId = `usr_${Date.now()}_${crypto.randomBytes(4).toString("hex")}`;
+    await tx.insert(schema.user).values({
+      id: userId,
+      name,
+      email: invite.email,
+      role: invite.role,
+      emailVerified: true,
+      createdAt: new Date(),
+      updatedAt: new Date(),
+    });
 
     // Hash password and store in account table
     const hashedPassword = await hashPassword(password);
-    const [existingAccount] = await tx
-      .select()
-      .from(schema.account)
-      .where(and(eq(schema.account.userId, userId), eq(schema.account.providerId, "credential")))
-      .limit(1);
-
-    if (existingAccount) {
-      await tx
-        .update(schema.account)
-        .set({
-          password: hashedPassword,
-          updatedAt: new Date(),
-        })
-        .where(eq(schema.account.id, existingAccount.id));
-    } else {
-      await tx.insert(schema.account).values({
-        id: `acc_${Date.now()}_${crypto.randomBytes(4).toString("hex")}`,
-        userId,
-        accountId: userId,
-        providerId: "credential",
-        password: hashedPassword,
-        createdAt: new Date(),
-        updatedAt: new Date(),
-      });
-    }
+    await tx.insert(schema.account).values({
+      id: `acc_${Date.now()}_${crypto.randomBytes(4).toString("hex")}`,
+      userId,
+      accountId: userId,
+      providerId: "credential",
+      password: hashedPassword,
+      createdAt: new Date(),
+      updatedAt: new Date(),
+    });
 
     // Mark invitation accepted
     await tx

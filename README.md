@@ -92,41 +92,47 @@ Fill in your configuration values:
 
 ### 3. Safe Database Migrations, Seeding, and Scripts
 
-Mercato includes safety guards on all mutating data scripts (`seed`, `seed-catalog`, `rewrite-legacy-images`, and `cleanup-legacy-admin`). To prevent accidental execution against production branches or incorrect databases:
+Mercato includes safety guards on all mutating data scripts (`seed`, `seed-catalog`, `seed-analytics-orders`, `rewrite-legacy-images`, and `cleanup-legacy-admin`). To prevent accidental execution against production branches or incorrect databases:
 1. Scripts refuse to run if `NODE_ENV === "production"`.
 2. Running a script without parameters displays the masked target (e.g. `ep-sw***tech/neondb`) and prompts for explicit confirmation.
-3. Execution requires the exact masked target flag:
+3. Execution requires the exact masked target flag. **Important (Windows PowerShell):** Always enclose the `--confirm-target` value in quotes (e.g. `--confirm-target='ep-sw***tech/neondb'`) to prevent PowerShell from misinterpreting slashes or punctuation as command separators.
+4. On Windows, execute commands via `pnpm.cmd`. Inline environment variables are set via `$env:VAR='value';`.
 
-```bash
+#### Windows PowerShell Command Reference:
+
+```powershell
 # Migrate primary development database
-pnpm db:generate
-pnpm db:migrate
+pnpm.cmd db:generate
+pnpm.cmd db:migrate
 
 # Migrate isolated test branch database
-pnpm db:migrate:test
+pnpm.cmd db:migrate:test
 
 # Import complete Indonesian administrative regions (38 prov, 514 reg, 7,265 dist)
-pnpm db:import-regions
+pnpm.cmd db:import-regions
 
-# Seed development users and store owner (requires SEED_ADMIN_EMAIL and SEED_ADMIN_PASSWORD in .env.local)
-pnpm db:seed --confirm-target=ep-sw***tech/neondb
+# Seed development users and store owner (password requires min 12 chars, uppercase, lowercase, number, symbol)
+$env:SEED_ADMIN_EMAIL='owner@example.com'; $env:SEED_ADMIN_PASSWORD='StrongPassword123!'; pnpm.cmd db:seed --confirm-target='ep-sw***tech/neondb'
 
 # Seed catalog categories, collections, and products
-pnpm db:seed-catalog --confirm-target=ep-sw***tech/neondb
+pnpm.cmd db:seed-catalog --confirm-target='ep-sw***tech/neondb'
+
+# Seed historical analytics demo orders (~200 orders spread across 60 days, idempotent with MRC-SIM- prefix)
+pnpm.cmd db:seed-analytics-orders --confirm-target='ep-sw***tech/neondb'
 
 # Rewrite any legacy external image URLs to self-hosted placeholders
-pnpm db:rewrite-legacy-images --confirm-target=ep-sw***tech/neondb
+pnpm.cmd db:rewrite-legacy-images --confirm-target='ep-sw***tech/neondb'
 
 # Purge legacy dummy admin accounts from earlier prototype phases
-pnpm db:cleanup-legacy-admin --confirm-target=ep-sw***tech/neondb
+pnpm.cmd db:cleanup-legacy-admin --confirm-target='ep-sw***tech/neondb'
 ```
 
 ### 4. Development Server
 
 Start the Next.js development server with Turbopack:
 
-```bash
-pnpm dev
+```powershell
+pnpm.cmd dev
 ```
 
 Open [http://localhost:3000](http://localhost:3000) in your browser. The application automatically directs to the default locale (`/id` or `/en`).

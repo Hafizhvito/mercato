@@ -1,3 +1,4 @@
+import { eq } from "drizzle-orm";
 import { NextRequest } from "next/server";
 import { afterAll, beforeAll, describe, expect, it, vi } from "vitest";
 import { db } from "@/lib/db";
@@ -142,24 +143,19 @@ describe("Phase 5: Comprehensive Role-Based Authorization & Multi-Tenant IDOR Ma
   };
 
   beforeAll(async () => {
-    // 1. Identify primary store as Store A, and create Store B for multi-tenant isolation
-    const existingStore = await db.query.stores.findFirst();
-    if (existingStore) {
-      storeAId = existingStore.id;
-    } else {
-      const [storeA] = await db
-        .insert(schema.stores)
-        .values({
-          name: "Store Alpha",
-          slug: `store-alpha-${Date.now()}`,
-          currency: "IDR",
-          locale: "id",
-          taxRatePercent: 11,
-          taxInclusive: false,
-        })
-        .returning();
-      storeAId = storeA!.id;
-    }
+    // 1. Provision dedicated Store A and Store B for role testing and multi-tenant isolation
+    const [storeA] = await db
+      .insert(schema.stores)
+      .values({
+        name: `Store Alpha Matrix ${Date.now()}`,
+        slug: `store-alpha-matrix-${Date.now()}`,
+        currency: "IDR",
+        locale: "id",
+        taxRatePercent: 0,
+        taxInclusive: false,
+      })
+      .returning();
+    storeAId = storeA!.id;
 
     const [storeB] = await db
       .insert(schema.stores)
@@ -742,9 +738,15 @@ describe("Phase 5: Comprehensive Role-Based Authorization & Multi-Tenant IDOR Ma
   });
 
   afterAll(async () => {
-    // Reset stores to zero tax to guarantee no side effects on concurrent test suites
+    // Reset stores to zero tax and clean up test stores
     if (storeAId) {
       await db.update(schema.stores).set({ taxRatePercent: 0, taxInclusive: false });
+    }
+    if (storeBId) {
+      await db
+        .delete(schema.stores)
+        .where(eq(schema.stores.id, storeBId))
+        .catch(() => {});
     }
   });
 });

@@ -1,4 +1,5 @@
 import crypto from "node:crypto";
+import { hashPassword } from "better-auth/crypto";
 import { eq } from "drizzle-orm";
 import { beforeAll, describe, expect, it } from "vitest";
 import { db } from "@/lib/db";
@@ -202,8 +203,9 @@ describe("Phase 5: Staff Invite Flow & Governance Integration Suite", () => {
     ).rejects.toThrow("Password must contain at least one special character or symbol.");
   });
 
-  it("safely handles invitation for existing customer account (elevates to staff)", async () => {
+  it("strictly rejects invitation acceptance if target email already has an account (customer), preventing silent elevation or password overwrite", async () => {
     const existingEmail = `existing-cust-${Date.now()}@example.test`;
+    const initialPassword = "CustomerOriginalPassword123!";
     const [existingCust] = await db
       .insert(schema.user)
       .values({
@@ -215,6 +217,16 @@ describe("Phase 5: Staff Invite Flow & Governance Integration Suite", () => {
       })
       .returning();
 
+    // Insert original credential account
+    const originalHashedPassword = await hashPassword(initialPassword);
+    await db.insert(schema.account).values({
+      id: `acc-exist-${Date.now()}`,
+      userId: existingCust!.id,
+      accountId: existingCust!.id,
+      providerId: "credential",
+      password: originalHashedPassword,
+    });
+
     const inviteToken = `token-exist-${Date.now()}`;
     await db.insert(schema.staffInvitations).values({
       storeId,
@@ -225,20 +237,59 @@ describe("Phase 5: Staff Invite Flow & Governance Integration Suite", () => {
       expiresAt: new Date(Date.now() + 3600000),
     });
 
-    const res = await acceptStaffInviteAction({
-      token: inviteToken,
-      name: "Existing Customer Turned Staff",
-      password: "NewStaffPassword2026!",
-    });
+    // Accepting invite for existing customer must fail
+    await expect(
+      acceptStaffInviteAction({
+        token: inviteToken,
+        name: "Malicious Takeover Attempt",
+        password: "AttackerNewPassword2026!",
+      }),
+    ).rejects.toThrow(/sudah terdaftar \(customer\)/);
 
-    expect(res.success).toBe(true);
-    const [updatedUser] = await db
+    // Verify user role is unchanged (still 'customer')
+    const [userAfter] = await db
       .select()
       .from(schema.user)
       .where(eq(schema.user.id, existingCust!.id))
       .limit(1);
+    expect(userAfter?.role).toBe("customer");
 
-    expect(updatedUser?.role).toBe("staff");
+    // Verify password is NOT overwritten
+    const [accountAfter] = await db
+      .select()
+      .from(schema.account)
+      .where(eq(schema.account.userId, existingCust!.id))
+      .limit(1);
+    expect(accountAfter?.password).toBe(originalHashedPassword);
+  });
+
+  it("strictly rejects invitation acceptance if target email already belongs to staff or admin", async () => {
+    const existingStaffEmail = `existing-staff-${Date.now()}@example.test`;
+    await db.insert(schema.user).values({
+      id: `usr-ex-staff-${Date.now()}`,
+      name: "Existing Staff User",
+      email: existingStaffEmail,
+      role: "staff",
+      emailVerified: true,
+    });
+
+    const inviteToken = `token-staff-elev-${Date.now()}`;
+    await db.insert(schema.staffInvitations).values({
+      storeId,
+      email: existingStaffEmail,
+      role: "admin",
+      token: hashInviteToken(inviteToken),
+      invitedBy: ownerUserId,
+      expiresAt: new Date(Date.now() + 3600000),
+    });
+
+    await expect(
+      acceptStaffInviteAction({
+        token: inviteToken,
+        name: "Staff Elevation Attempt",
+        password: "NewAdminPassword2026!",
+      }),
+    ).rejects.toThrow(/sudah terdaftar \(staff\)/);
   });
 
   it("safely rejects invitation acceptance if target email belongs to store owner", async () => {
