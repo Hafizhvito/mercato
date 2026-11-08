@@ -11,6 +11,7 @@ import { authRateLimiter } from "@/lib/cache/ratelimit";
 import { db } from "@/lib/db";
 import * as schema from "@/lib/db/schema";
 import { emailService } from "@/lib/email";
+import { sanitizeAuditDetails } from "@/server/audit-log";
 import { assertPermission, assertStaffModificationAllowed, type UserRole } from "@/server/guards";
 
 function hashInviteToken(rawToken: string): string {
@@ -74,12 +75,14 @@ export async function updateStoreSettingsAction(input: UpdateStoreSettingsInput)
       action: "settings.store_updated",
       entityType: "store",
       entityId: store.id,
-      details: JSON.stringify({
-        name: trimmedName,
-        lowStockThreshold: input.lowStockThreshold,
-        taxRatePercent: input.taxRatePercent,
-        taxInclusive: input.taxInclusive,
-      }),
+      details: JSON.stringify(
+        sanitizeAuditDetails({
+          name: trimmedName,
+          lowStockThreshold: input.lowStockThreshold,
+          taxRatePercent: input.taxRatePercent,
+          taxInclusive: input.taxInclusive,
+        }),
+      ),
     });
   });
 
@@ -124,7 +127,14 @@ export async function inviteStaffAction(input: { email: string; role: "staff" | 
     );
   }
 
-  const [store] = await db.select({ id: schema.stores.id }).from(schema.stores).limit(1);
+  const storeQuery = (user as { storeId?: string | null }).storeId
+    ? db
+        .select({ id: schema.stores.id })
+        .from(schema.stores)
+        .where(eq(schema.stores.id, (user as { storeId?: string | null }).storeId!))
+        .limit(1)
+    : db.select({ id: schema.stores.id }).from(schema.stores).limit(1);
+  const [store] = await storeQuery;
   if (!store) throw new Error("No configured store found.");
 
   // Generate 32-byte secure hex token (64 hex characters)
@@ -160,14 +170,14 @@ export async function inviteStaffAction(input: { email: string; role: "staff" | 
       throw new Error("Gagal membuat data undangan");
     }
 
-    // Audit log (sanitized: only email & role, never the token)
+    // Audit log (sanitized: only masked email & role, never the token)
     await tx.insert(schema.auditLogs).values({
       storeId: store.id,
       userId: user.id,
       action: "staff.invited",
       entityType: "staff_invitation",
       entityId: created.id,
-      details: JSON.stringify({ email: trimmedEmail, role: input.role }),
+      details: JSON.stringify(sanitizeAuditDetails({ email: trimmedEmail, role: input.role })),
     });
 
     return created;
@@ -322,7 +332,7 @@ export async function acceptStaffInviteAction(input: {
       action: "staff.invite_accepted",
       entityType: "user",
       entityId: userId,
-      details: JSON.stringify({ email: invite.email, role: invite.role }),
+      details: JSON.stringify(sanitizeAuditDetails({ email: invite.email, role: invite.role })),
     });
 
     return { success: true, email: invite.email };
@@ -336,7 +346,14 @@ export async function updateStaffRoleAction(input: {
   const user = await getAuthenticatedUser();
   assertPermission(user, "staff:manage");
 
-  const [store] = await db.select({ id: schema.stores.id }).from(schema.stores).limit(1);
+  const storeQuery = (user as { storeId?: string | null }).storeId
+    ? db
+        .select({ id: schema.stores.id })
+        .from(schema.stores)
+        .where(eq(schema.stores.id, (user as { storeId?: string | null }).storeId!))
+        .limit(1)
+    : db.select({ id: schema.stores.id }).from(schema.stores).limit(1);
+  const [store] = await storeQuery;
   const storeId = store?.id || "";
 
   await db.transaction(async (tx) => {
@@ -376,10 +393,12 @@ export async function updateStaffRoleAction(input: {
         action: "staff.role_updated",
         entityType: "user",
         entityId: targetUser.id,
-        details: JSON.stringify({
-          fromRole: targetUser.role,
-          toRole: input.newRole,
-        }),
+        details: JSON.stringify(
+          sanitizeAuditDetails({
+            fromRole: targetUser.role,
+            toRole: input.newRole,
+          }),
+        ),
       });
     }
   });

@@ -20,9 +20,7 @@ export default async function AccountProfilePage({ params }: Props) {
     <div className="rounded-xl border border-zinc-200 bg-white p-6 shadow-xs space-y-6">
       <div>
         <h2 className="text-base font-bold text-zinc-950">{t("profileTab")}</h2>
-        <p className="text-xs text-zinc-500 mt-0.5">
-          Perbarui informasi nama dan detail profil akun Anda.
-        </p>
+        <p className="text-xs text-zinc-500 mt-0.5">{t("profileDesc")}</p>
       </div>
 
       <ProfileForm
@@ -31,8 +29,10 @@ export default async function AccountProfilePage({ params }: Props) {
         labels={{
           name: t("name"),
           email: t("email"),
+          emailHelpText: t("emailHelpText"),
           saveProfile: t("saveProfile"),
           profileUpdated: t("profileUpdated"),
+          profileUpdateFailed: t("profileUpdateFailed"),
         }}
       />
     </div>

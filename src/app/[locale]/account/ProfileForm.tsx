@@ -11,8 +11,10 @@ interface Props {
   labels: {
     name: string;
     email: string;
+    emailHelpText: string;
     saveProfile: string;
     profileUpdated: string;
+    profileUpdateFailed: string;
   };
 }
 
@@ -36,7 +38,7 @@ export function ProfileForm({ initialName, email, labels }: Props) {
         setSuccess(true);
         router.refresh();
       } catch (err) {
-        setError(err instanceof Error ? err.message : "Gagal memperbarui profil");
+        setError(err instanceof Error ? err.message : labels.profileUpdateFailed);
       }
     });
   };
@@ -81,9 +83,7 @@ export function ProfileForm({ initialName, email, labels }: Props) {
           value={email}
           className="w-full rounded-lg border border-zinc-200 p-2 text-xs text-zinc-500 bg-zinc-100 cursor-not-allowed font-mono"
         />
-        <p className="text-[11px] text-zinc-400 mt-1">
-          Alamat email terikat pada akun Anda dan digunakan untuk notifikasi pesanan.
-        </p>
+        <p className="text-[11px] text-zinc-400 mt-1">{labels.emailHelpText}</p>
       </div>
 
       <div className="pt-2">

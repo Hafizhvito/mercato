@@ -33,9 +33,7 @@ export default async function AccountOrdersPage({ params }: Props) {
     <div className="rounded-xl border border-zinc-200 bg-white p-6 shadow-xs space-y-4">
       <div>
         <h2 className="text-base font-bold text-zinc-950">{t("ordersTab")}</h2>
-        <p className="text-xs text-zinc-500 mt-0.5">
-          Pantau status pesanan, pembayaran, dan informasi nomor resi pengiriman Anda.
-        </p>
+        <p className="text-xs text-zinc-500 mt-0.5">{t("ordersDesc")}</p>
       </div>
 
       {orders.length === 0 ? (
@@ -46,7 +44,7 @@ export default async function AccountOrdersPage({ params }: Props) {
             href={`/${locale}/catalog`}
             className="inline-block mt-2 rounded-lg bg-zinc-900 px-4 py-2 text-xs font-semibold text-white hover:bg-zinc-800"
           >
-            Mulai Belanja
+            {t("startShopping")}
           </Link>
         </div>
       ) : (
@@ -69,12 +67,12 @@ export default async function AccountOrdersPage({ params }: Props) {
                     </span>
                     {order.paymentStatus === "paid" && (
                       <span className="inline-flex rounded-full px-2 py-0.5 text-[10px] font-medium bg-emerald-50 text-emerald-700 border border-emerald-200">
-                        Paid
+                        {t("paidBadge")}
                       </span>
                     )}
                   </div>
                   <div className="text-zinc-500">
-                    {new Date(order.createdAt).toLocaleString("id-ID", {
+                    {new Date(order.createdAt).toLocaleString(locale === "en" ? "en-US" : "id-ID", {
                       dateStyle: "medium",
                       timeStyle: "short",
                     })}

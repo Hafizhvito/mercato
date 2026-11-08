@@ -1,4 +1,4 @@
-import { desc, eq } from "drizzle-orm";
+import { and, desc, eq } from "drizzle-orm";
 import {
   ArrowLeft,
   Calendar,
@@ -54,7 +54,14 @@ export default async function AdminCustomerDetailPage({ params }: Props) {
     db
       .select()
       .from(schema.orders)
-      .where(eq(schema.orders.customerId, customer.id))
+      .where(
+        session.user.storeId
+          ? and(
+              eq(schema.orders.customerId, customer.id),
+              eq(schema.orders.storeId, session.user.storeId),
+            )
+          : eq(schema.orders.customerId, customer.id),
+      )
       .orderBy(desc(schema.orders.createdAt)),
     db
       .select()

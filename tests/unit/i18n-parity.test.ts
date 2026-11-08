@@ -53,4 +53,44 @@ describe("i18n Messages Parity Test", () => {
     expect(idKeys).toEqual(enKeys);
     expect(idKeys.length).toBeGreaterThan(100);
   });
+
+  it("should have no hardcoded Indonesian user-facing strings in storefront account pages", () => {
+    const accountDir = path.resolve(process.cwd(), "src/app/[locale]/account");
+    const filesToScan = [
+      path.join(accountDir, "layout.tsx"),
+      path.join(accountDir, "page.tsx"),
+      path.join(accountDir, "ProfileForm.tsx"),
+      path.join(accountDir, "addresses/page.tsx"),
+      path.join(accountDir, "addresses/AddressBookView.tsx"),
+      path.join(accountDir, "orders/page.tsx"),
+      path.join(accountDir, "orders/[orderNumber]/page.tsx"),
+    ];
+
+    const forbiddenPhrases = [
+      "Perbarui informasi nama",
+      "Gagal memperbarui profil",
+      "Alamat email terikat pada akun",
+      "Daftar alamat tersimpan",
+      "Alamat Pilihan",
+      "-- Pilih Provinsi --",
+      "-- Pilih Kota / Kab --",
+      "-- Pilih Kecamatan --",
+      "Jadikan sebagai alamat pengiriman utama",
+      "Pantau status pesanan",
+      "Mulai Belanja",
+      "Informasi Resi Pengiriman",
+      "Item Pesanan",
+    ];
+
+    for (const filePath of filesToScan) {
+      expect(fs.existsSync(filePath)).toBe(true);
+      const source = fs.readFileSync(filePath, "utf-8");
+      for (const phrase of forbiddenPhrases) {
+        expect(
+          source,
+          `Found hardcoded phrase '${phrase}' in ${path.basename(filePath)}`,
+        ).not.toContain(phrase);
+      }
+    }
+  });
 });

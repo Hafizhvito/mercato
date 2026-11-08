@@ -18,7 +18,7 @@ import * as schema from "@/lib/db/schema";
 import { maskPhone } from "@/lib/mask";
 import { createMoney, formatMoney } from "@/lib/money";
 import { orderService } from "@/modules/orders/service";
-import { hasPermission } from "@/server/guards";
+import { assertStoreAccess, hasPermission } from "@/server/guards";
 import { AdminCancelUnpaidButton } from "./AdminCancelUnpaidButton";
 import { AdminFulfillmentForm } from "./AdminFulfillmentForm";
 import { AdminLatePaymentResolution } from "./AdminLatePaymentResolution";
@@ -53,6 +53,12 @@ export default async function AdminOrderDetailPage({ params }: Props) {
   const [order] = await db.select().from(schema.orders).where(eq(schema.orders.id, id)).limit(1);
 
   if (!order) {
+    notFound();
+  }
+
+  try {
+    assertStoreAccess(session.user, order.storeId);
+  } catch {
     notFound();
   }
 

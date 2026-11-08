@@ -9,7 +9,10 @@ import { cartService } from "./service";
 
 const CART_COOKIE_NAME = "mercato_cart_token";
 
-async function getOrCreateCartIdentity(_storeId: string): Promise<{
+async function getOrCreateCartIdentity(
+  _storeId: string,
+  allowSetCookie = true,
+): Promise<{
   guestToken?: string;
   userId?: string;
 }> {
@@ -25,13 +28,19 @@ async function getOrCreateCartIdentity(_storeId: string): Promise<{
 
   if (!guestToken) {
     guestToken = crypto.randomUUID();
-    cookieStore.set(CART_COOKIE_NAME, guestToken, {
-      path: "/",
-      maxAge: 60 * 60 * 24 * 30, // 30 days
-      httpOnly: true,
-      sameSite: "lax",
-      secure: process.env.NODE_ENV === "production",
-    });
+    if (allowSetCookie) {
+      try {
+        cookieStore.set(CART_COOKIE_NAME, guestToken, {
+          path: "/",
+          maxAge: 60 * 60 * 24 * 30, // 30 days
+          httpOnly: true,
+          sameSite: "lax",
+          secure: process.env.NODE_ENV === "production",
+        });
+      } catch {
+        // Ignore cookie write errors when invoked during Server Component rendering
+      }
+    }
   }
 
   return { guestToken };
@@ -45,7 +54,7 @@ async function getPrimaryStoreId(): Promise<string> {
 
 export async function getCartAction() {
   const storeId = await getPrimaryStoreId();
-  const identity = await getOrCreateCartIdentity(storeId);
+  const identity = await getOrCreateCartIdentity(storeId, false);
   return cartService.getDetailedCart(storeId, identity);
 }
 

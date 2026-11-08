@@ -12,6 +12,7 @@ import { cartService } from "@/modules/cart/service";
 import { discountService } from "@/modules/discounts/service";
 import { shippingService } from "@/modules/shipping/service";
 import type { Address } from "@/modules/shipping/types";
+import { sanitizeAuditDetails } from "@/server/audit-log";
 import { assertPermission, assertStoreAccess } from "@/server/guards";
 import { orderService } from "./service";
 import { type OrderStatus, validateOrderTransition } from "./state-machine";
@@ -221,12 +222,14 @@ export async function fulfillOrderAction(input: {
       action: `order.status.${input.status}`,
       entityType: "order",
       entityId: order.id,
-      details: JSON.stringify({
-        from: order.status,
-        to: input.status,
-        carrier: input.carrier,
-        trackingNumber: input.trackingNumber,
-      }),
+      details: JSON.stringify(
+        sanitizeAuditDetails({
+          from: order.status,
+          to: input.status,
+          carrier: input.carrier,
+          trackingNumber: input.trackingNumber,
+        }),
+      ),
     });
   });
 
@@ -319,7 +322,7 @@ export async function cancelUnpaidOrderAction(input: { orderId: string; reason: 
       action: "order.cancelled_unpaid",
       entityType: "order",
       entityId: order.id,
-      details: JSON.stringify({ reason: input.reason }),
+      details: JSON.stringify(sanitizeAuditDetails({ reason: input.reason })),
     });
   });
 
@@ -367,7 +370,9 @@ export async function addOrderNoteAction(input: { orderId: string; note: string 
       action: "order.note_added",
       entityType: "order",
       entityId: order.id,
-      details: JSON.stringify({ noteSnippet: input.note.trim().slice(0, 50) }),
+      details: JSON.stringify(
+        sanitizeAuditDetails({ noteSnippet: input.note.trim().slice(0, 50) }),
+      ),
     });
   });
 
@@ -456,7 +461,7 @@ export async function acceptLatePaymentAction(input: { orderId: string }) {
       action: "order.late_payment_accepted",
       entityType: "order",
       entityId: order.id,
-      details: JSON.stringify({ acceptedBy: user.email }),
+      details: JSON.stringify(sanitizeAuditDetails({ acceptedBy: user.email })),
     });
   });
 

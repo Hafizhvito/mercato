@@ -1,5 +1,6 @@
 "use server";
 
+import { eq } from "drizzle-orm";
 import { revalidatePath } from "next/cache";
 import { headers } from "next/headers";
 import { auth } from "@/lib/auth";
@@ -7,7 +8,7 @@ import { authRateLimiter } from "@/lib/cache/ratelimit";
 import { db } from "@/lib/db";
 import * as schema from "@/lib/db/schema";
 import { orderService } from "@/modules/orders/service";
-import { assertPermission } from "@/server/guards";
+import { assertPermission, assertStoreAccess } from "@/server/guards";
 import { paymentService } from "./service";
 
 async function getPrimaryStoreId(): Promise<string> {
@@ -79,11 +80,21 @@ export async function refundOrderAction(input: {
 
   assertPermission(session?.user, "orders:refund");
 
-  const storeId = await getPrimaryStoreId();
+  const [order] = await db
+    .select({ id: schema.orders.id, storeId: schema.orders.storeId })
+    .from(schema.orders)
+    .where(eq(schema.orders.id, input.orderId))
+    .limit(1);
+
+  if (!order) {
+    throw new Error("Order not found");
+  }
+
+  assertStoreAccess(session.user, order.storeId);
 
   return paymentService.refundOrder({
     orderId: input.orderId,
-    storeId,
+    storeId: order.storeId,
     amountMinor: input.amountMinor,
     reason: input.reason,
     restockInventory: input.restockInventory,

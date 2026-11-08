@@ -32,21 +32,37 @@ export default async function AccountAddressesPage({ params }: Props) {
       <AddressBookView
         initialAddresses={addresses}
         labels={{
+          addressesTab: t("addressesTab"),
+          addressesDesc: t("addressesDesc"),
           noAddresses: t("noAddresses"),
           addAddress: t("addAddress"),
           editAddress: t("editAddress"),
           deleteAddress: t("deleteAddress"),
           setDefault: t("setDefault"),
           defaultBadge: t("defaultBadge"),
+          selectedAddressBadge: t("selectedAddressBadge"),
           recipientName: t("recipientName"),
           phone: t("phone"),
+          phonePlaceholder: t("phonePlaceholder"),
           street: t("street"),
+          streetPlaceholder: t("streetPlaceholder"),
           province: t("province"),
           city: t("city"),
           district: t("district"),
           postalCode: t("postalCode"),
+          postalCodePlaceholder: t("postalCodePlaceholder"),
+          loadingRegions: t("loadingRegions"),
+          selectProvince: t("selectProvince"),
+          selectCity: t("selectCity"),
+          selectDistrict: t("selectDistrict"),
+          makeDefaultCheckbox: t("makeDefaultCheckbox"),
+          cancel: t("cancel"),
           saveAddress: t("saveAddress"),
-          addressesTab: t("addressesTab"),
+          incompleteRegionError: t("incompleteRegionError"),
+          saveAddressFailed: t("saveAddressFailed"),
+          deleteAddressConfirm: t("deleteAddressConfirm"),
+          deleteAddressFailed: t("deleteAddressFailed"),
+          setDefaultFailed: t("setDefaultFailed"),
         }}
       />
     </div>

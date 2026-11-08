@@ -227,8 +227,9 @@ export class ConsoleEmailService implements EmailService {
     expiresAt: Date;
     locale?: string;
   }): Promise<void> {
+    const safeUrl = options.inviteUrl.replace(/token=[^&\s]+/, "token=[REDACTED_ONE_TIME_TOKEN]");
     logger.info(
-      { to: options.to, role: options.role, url: options.inviteUrl },
+      { to: options.to, role: options.role, url: safeUrl },
       "Development Email: Sending staff invitation link",
     );
     console.log(
@@ -465,8 +466,9 @@ export class ResendEmailService implements EmailService {
     expiresAt: Date;
     locale?: string;
   }): Promise<void> {
+    const safeUrl = options.inviteUrl.replace(/token=[^&\s]+/, "token=[REDACTED_ONE_TIME_TOKEN]");
     logger.info(
-      { to: options.to, role: options.role, url: options.inviteUrl },
+      { to: options.to, role: options.role, url: safeUrl },
       "Development Email: Sending staff invitation link",
     );
     console.log(

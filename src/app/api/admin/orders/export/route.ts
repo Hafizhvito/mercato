@@ -61,6 +61,10 @@ export async function GET(request: NextRequest) {
 
   const conditions = [];
 
+  if (session.user.storeId) {
+    conditions.push(eq(schema.orders.storeId, session.user.storeId));
+  }
+
   if (statusParam && statusParam !== "all") {
     conditions.push(eq(schema.orders.status, statusParam));
   }

@@ -61,7 +61,7 @@ export default async function CustomerOrderDetailPage({ params }: Props) {
             {t("orderNumber")} #{order.orderNumber}
           </h2>
           <p className="text-[11px] text-zinc-500">
-            {new Date(order.createdAt).toLocaleString("id-ID", {
+            {new Date(order.createdAt).toLocaleString(locale === "en" ? "en-US" : "id-ID", {
               dateStyle: "full",
               timeStyle: "short",
             })}
@@ -74,14 +74,16 @@ export default async function CustomerOrderDetailPage({ params }: Props) {
         <div className="rounded-xl border border-blue-200 bg-blue-50/60 p-4 flex items-start gap-3">
           <Truck className="h-5 w-5 text-blue-600 shrink-0 mt-0.5" />
           <div className="space-y-1 text-xs text-blue-950">
-            <div className="font-bold">Informasi Resi Pengiriman</div>
+            <div className="font-bold">{t("trackingInfoTitle")}</div>
             <p className="text-blue-900">
-              Kurir: <strong>{order.shippingCarrier || "Ekspedisi"}</strong> • Nomor Resi:{" "}
+              {t("carrier")}: <strong>{order.shippingCarrier || t("courierFallback")}</strong> •{" "}
+              {t("trackingNumber")}:{" "}
               <strong className="font-mono">{order.shippingTrackingNumber}</strong>
             </p>
             {order.shippedAt && (
               <p className="text-[11px] text-blue-800">
-                Dikirim pada: {new Date(order.shippedAt).toLocaleString("id-ID")}
+                {t("shippedAtLabel")}:{" "}
+                {new Date(order.shippedAt).toLocaleString(locale === "en" ? "en-US" : "id-ID")}
               </p>
             )}
           </div>
@@ -93,10 +95,10 @@ export default async function CustomerOrderDetailPage({ params }: Props) {
         <div className="rounded-xl border border-zinc-200 bg-white p-5 shadow-xs">
           <div className="grid grid-cols-4 gap-2 text-center text-xs">
             {[
-              { key: "paid", label: "Dibayar" },
-              { key: "processing", label: "Dikemas" },
-              { key: "shipped", label: "Dikirim" },
-              { key: "delivered", label: "Tiba" },
+              { key: "paid", label: t("stagePaid") },
+              { key: "processing", label: t("stageProcessing") },
+              { key: "shipped", label: t("stageShipped") },
+              { key: "delivered", label: t("stageDelivered") },
             ].map((st, idx) => {
               const isPast = currentStageIndex >= idx;
               const isCurrent = currentStageIndex === idx;
@@ -128,7 +130,7 @@ export default async function CustomerOrderDetailPage({ params }: Props) {
           <div className="rounded-xl border border-zinc-200 bg-white p-6 shadow-xs space-y-4">
             <h3 className="text-sm font-bold text-zinc-950 flex items-center gap-2">
               <Package className="h-4 w-4 text-zinc-500" />
-              Item Pesanan ({items.length})
+              {t("orderItemsTitle")} ({items.length})
             </h3>
 
             <div className="divide-y divide-zinc-100 text-xs">
@@ -189,13 +191,13 @@ export default async function CustomerOrderDetailPage({ params }: Props) {
               </div>
               {order.discountAmount > 0 && (
                 <div className="flex justify-between text-emerald-600 font-medium">
-                  <span>Diskon</span>
+                  <span>{t("discount")}</span>
                   <span>-{formatMoney(createMoney(order.discountAmount, order.currency))}</span>
                 </div>
               )}
               {order.taxAmount > 0 && (
                 <div className="flex justify-between">
-                  <span>Pajak (PPN)</span>
+                  <span>{t("taxLabel")}</span>
                   <span className="font-medium text-zinc-900">
                     {formatMoney(createMoney(order.taxAmount, order.currency))}
                   </span>

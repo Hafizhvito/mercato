@@ -6,6 +6,7 @@ import { headers } from "next/headers";
 import { auth } from "@/lib/auth";
 import { db } from "@/lib/db";
 import * as schema from "@/lib/db/schema";
+import { sanitizeAuditDetails } from "@/server/audit-log";
 import { assertPermission, assertStoreAccess } from "@/server/guards";
 
 async function getAuthenticatedUser() {
@@ -106,15 +107,17 @@ export async function adjustStockAction(input: AdjustStockInput) {
       action: "inventory.stock_adjusted",
       entityType: "product_variant",
       entityId: row.variantId,
-      details: JSON.stringify({
-        sku: row.sku,
-        productName: row.productName,
-        variantTitle: row.variantTitle,
-        previousStock,
-        newStock,
-        delta: input.delta,
-        reason: trimmedReason,
-      }),
+      details: JSON.stringify(
+        sanitizeAuditDetails({
+          sku: row.sku,
+          productName: row.productName,
+          variantTitle: row.variantTitle,
+          previousStock,
+          newStock,
+          delta: input.delta,
+          reason: trimmedReason,
+        }),
+      ),
     });
 
     return {

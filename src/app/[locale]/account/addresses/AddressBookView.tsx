@@ -22,20 +22,36 @@ interface RegionOption {
 
 interface Labels {
   addressesTab: string;
+  addressesDesc: string;
   noAddresses: string;
   addAddress: string;
   editAddress: string;
   deleteAddress: string;
   setDefault: string;
   defaultBadge: string;
+  selectedAddressBadge: string;
   recipientName: string;
   phone: string;
+  phonePlaceholder: string;
   street: string;
+  streetPlaceholder: string;
   province: string;
   city: string;
   district: string;
   postalCode: string;
+  postalCodePlaceholder: string;
+  loadingRegions: string;
+  selectProvince: string;
+  selectCity: string;
+  selectDistrict: string;
+  makeDefaultCheckbox: string;
+  cancel: string;
   saveAddress: string;
+  incompleteRegionError: string;
+  saveAddressFailed: string;
+  deleteAddressConfirm: string;
+  deleteAddressFailed: string;
+  setDefaultFailed: string;
 }
 
 interface Props {
@@ -94,6 +110,7 @@ export function AddressBookView({ initialAddresses, labels }: Props) {
     setRegencies([]);
     setDistricts([]);
     setSelectedDistrictName("");
+    setPostalCode("");
 
     if (!provCode) return;
     setLoadingRegencies(true);
@@ -113,6 +130,7 @@ export function AddressBookView({ initialAddresses, labels }: Props) {
 
     setDistricts([]);
     setSelectedDistrictName("");
+    setPostalCode("");
 
     if (!regCode) return;
     setLoadingDistricts(true);
@@ -163,7 +181,7 @@ export function AddressBookView({ initialAddresses, labels }: Props) {
     const dist = selectedDistrictName || editingAddress?.district;
 
     if (!prov || !cit || !dist) {
-      setError("Silakan lengkapi pilihan Provinsi, Kota/Kabupaten, dan Kecamatan.");
+      setError(labels.incompleteRegionError);
       return;
     }
 
@@ -183,19 +201,19 @@ export function AddressBookView({ initialAddresses, labels }: Props) {
         setModalOpen(false);
         router.refresh();
       } catch (err) {
-        setError(err instanceof Error ? err.message : "Gagal menyimpan alamat");
+        setError(err instanceof Error ? err.message : labels.saveAddressFailed);
       }
     });
   };
 
   const handleDelete = (id: string) => {
-    if (!confirm("Apakah Anda yakin ingin menghapus alamat ini?")) return;
+    if (!confirm(labels.deleteAddressConfirm)) return;
     startTransition(async () => {
       try {
         await deleteCustomerAddressAction(id);
         router.refresh();
       } catch (err) {
-        alert(err instanceof Error ? err.message : "Gagal menghapus alamat");
+        alert(err instanceof Error ? err.message : labels.deleteAddressFailed);
       }
     });
   };
@@ -206,7 +224,7 @@ export function AddressBookView({ initialAddresses, labels }: Props) {
         await setDefaultCustomerAddressAction(id);
         router.refresh();
       } catch (err) {
-        alert(err instanceof Error ? err.message : "Gagal mengatur alamat default");
+        alert(err instanceof Error ? err.message : labels.setDefaultFailed);
       }
     });
   };
@@ -216,9 +234,7 @@ export function AddressBookView({ initialAddresses, labels }: Props) {
       <div className="flex items-center justify-between">
         <div>
           <h2 className="text-base font-bold text-zinc-950">{labels.addressesTab}</h2>
-          <p className="text-xs text-zinc-500 mt-0.5">
-            Daftar alamat tersimpan untuk mempercepat proses checkout.
-          </p>
+          <p className="text-xs text-zinc-500 mt-0.5">{labels.addressesDesc}</p>
         </div>
 
         <button
@@ -287,7 +303,7 @@ export function AddressBookView({ initialAddresses, labels }: Props) {
                     {labels.setDefault}
                   </button>
                 ) : (
-                  <span className="text-[11px] text-zinc-400">Alamat Pilihan</span>
+                  <span className="text-[11px] text-zinc-400">{labels.selectedAddressBadge}</span>
                 )}
 
                 <div className="flex items-center gap-3">
@@ -365,7 +381,7 @@ export function AddressBookView({ initialAddresses, labels }: Props) {
                     id="addr-phone"
                     type="tel"
                     required
-                    placeholder="0812xxxxxxxx"
+                    placeholder={labels.phonePlaceholder}
                     value={phone}
                     onChange={(e) => setPhone(e.target.value)}
                     className="w-full rounded-lg border border-zinc-200 p-2 text-zinc-900 focus:border-zinc-900 focus:outline-hidden"
@@ -381,7 +397,7 @@ export function AddressBookView({ initialAddresses, labels }: Props) {
                   id="addr-street"
                   rows={2}
                   required
-                  placeholder="Nama jalan, nomor rumah, RT/RW, gedung, patokan..."
+                  placeholder={labels.streetPlaceholder}
                   value={street}
                   onChange={(e) => setStreet(e.target.value)}
                   className="w-full rounded-lg border border-zinc-200 p-2 text-zinc-900 focus:border-zinc-900 focus:outline-hidden"
@@ -391,7 +407,7 @@ export function AddressBookView({ initialAddresses, labels }: Props) {
               {/* Cascading Dropdowns */}
               <div>
                 <label htmlFor="addr-province" className="block font-semibold text-zinc-700 mb-1">
-                  {labels.province} {loadingProvinces && "(Memuat...)"}
+                  {labels.province} {loadingProvinces && labels.loadingRegions}
                 </label>
                 <select
                   id="addr-province"
@@ -400,9 +416,7 @@ export function AddressBookView({ initialAddresses, labels }: Props) {
                   className="w-full rounded-lg border border-zinc-200 p-2 text-zinc-900 focus:border-zinc-900 focus:outline-hidden bg-white"
                 >
                   <option value="">
-                    {editingAddress?.province
-                      ? `Tetap: ${editingAddress.province}`
-                      : "-- Pilih Provinsi --"}
+                    {editingAddress?.province ? editingAddress.province : labels.selectProvince}
                   </option>
                   {provinces.map((p) => (
                     <option key={p.code} value={p.code}>
@@ -415,7 +429,7 @@ export function AddressBookView({ initialAddresses, labels }: Props) {
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                 <div>
                   <label htmlFor="addr-city" className="block font-semibold text-zinc-700 mb-1">
-                    {labels.city} {loadingRegencies && "(Memuat...)"}
+                    {labels.city} {loadingRegencies && labels.loadingRegions}
                   </label>
                   <select
                     id="addr-city"
@@ -425,9 +439,7 @@ export function AddressBookView({ initialAddresses, labels }: Props) {
                     className="w-full rounded-lg border border-zinc-200 p-2 text-zinc-900 focus:border-zinc-900 focus:outline-hidden bg-white disabled:bg-zinc-100"
                   >
                     <option value="">
-                      {editingAddress?.city
-                        ? `Tetap: ${editingAddress.city}`
-                        : "-- Pilih Kota / Kab --"}
+                      {editingAddress?.city ? editingAddress.city : labels.selectCity}
                     </option>
                     {regencies.map((r) => (
                       <option key={r.code} value={r.code}>
@@ -439,19 +451,20 @@ export function AddressBookView({ initialAddresses, labels }: Props) {
 
                 <div>
                   <label htmlFor="addr-district" className="block font-semibold text-zinc-700 mb-1">
-                    {labels.district} {loadingDistricts && "(Memuat...)"}
+                    {labels.district} {loadingDistricts && labels.loadingRegions}
                   </label>
                   <select
                     id="addr-district"
                     disabled={districts.length === 0 && !editingAddress}
                     value={selectedDistrictName}
-                    onChange={(e) => setSelectedDistrictName(e.target.value)}
+                    onChange={(e) => {
+                      setSelectedDistrictName(e.target.value);
+                      setPostalCode("");
+                    }}
                     className="w-full rounded-lg border border-zinc-200 p-2 text-zinc-900 focus:border-zinc-900 focus:outline-hidden bg-white disabled:bg-zinc-100"
                   >
                     <option value="">
-                      {editingAddress?.district
-                        ? `Tetap: ${editingAddress.district}`
-                        : "-- Pilih Kecamatan --"}
+                      {editingAddress?.district ? editingAddress.district : labels.selectDistrict}
                     </option>
                     {districts.map((d) => (
                       <option key={d.code} value={d.name}>
@@ -473,7 +486,7 @@ export function AddressBookView({ initialAddresses, labels }: Props) {
                   id="addr-postal-code"
                   type="text"
                   required
-                  placeholder="Contoh: 10110"
+                  placeholder={labels.postalCodePlaceholder}
                   value={postalCode}
                   onChange={(e) => setPostalCode(e.target.value)}
                   className="w-full rounded-lg border border-zinc-200 p-2 text-zinc-900 focus:border-zinc-900 focus:outline-hidden"
@@ -487,7 +500,7 @@ export function AddressBookView({ initialAddresses, labels }: Props) {
                   onChange={(e) => setIsDefault(e.target.checked)}
                   className="rounded border-zinc-300 text-zinc-900 focus:ring-zinc-900"
                 />
-                <span className="text-zinc-700">Jadikan sebagai alamat pengiriman utama</span>
+                <span className="text-zinc-700">{labels.makeDefaultCheckbox}</span>
               </label>
 
               <div className="flex justify-end gap-2 pt-3 border-t border-zinc-100">
@@ -496,7 +509,7 @@ export function AddressBookView({ initialAddresses, labels }: Props) {
                   onClick={() => setModalOpen(false)}
                   className="px-3 py-2 rounded-lg border border-zinc-200 text-zinc-600 hover:bg-zinc-50"
                 >
-                  Batal
+                  {labels.cancel}
                 </button>
                 <button
                   type="submit"

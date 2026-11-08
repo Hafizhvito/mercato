@@ -6,6 +6,7 @@ import { headers } from "next/headers";
 import { auth } from "@/lib/auth";
 import { db } from "@/lib/db";
 import * as schema from "@/lib/db/schema";
+import { sanitizeAuditDetails } from "@/server/audit-log";
 import { assertPermission } from "@/server/guards";
 
 async function getAuthenticatedUser() {
@@ -17,7 +18,8 @@ async function getAuthenticatedUser() {
   return session.user;
 }
 
-async function getPrimaryStoreId(): Promise<string> {
+async function getPrimaryStoreId(userStoreId?: string | null): Promise<string> {
+  if (userStoreId) return userStoreId;
   const [store] = await db.select({ id: schema.stores.id }).from(schema.stores).limit(1);
   if (!store) throw new Error("No configured store found");
   return store.id;
@@ -41,7 +43,7 @@ export async function createDiscountAction(input: SaveDiscountInput) {
   const user = await getAuthenticatedUser();
   assertPermission(user, "discounts:manage");
 
-  const storeId = await getPrimaryStoreId();
+  const storeId = await getPrimaryStoreId((user as { storeId?: string | null }).storeId);
   const cleanCode = input.code.trim().toUpperCase();
 
   if (!cleanCode || cleanCode.length < 3) {
@@ -102,11 +104,13 @@ export async function createDiscountAction(input: SaveDiscountInput) {
       action: "discount.created",
       entityType: "discount",
       entityId: created.id,
-      details: JSON.stringify({
-        code: cleanCode,
-        type: input.type,
-        value: input.value,
-      }),
+      details: JSON.stringify(
+        sanitizeAuditDetails({
+          code: cleanCode,
+          type: input.type,
+          value: input.value,
+        }),
+      ),
     });
 
     return [created];
@@ -162,11 +166,13 @@ export async function updateDiscountAction(input: SaveDiscountInput & { id: stri
       action: "discount.updated",
       entityType: "discount",
       entityId: input.id,
-      details: JSON.stringify({
-        code: cleanCode,
-        type: input.type,
-        value: input.value,
-      }),
+      details: JSON.stringify(
+        sanitizeAuditDetails({
+          code: cleanCode,
+          type: input.type,
+          value: input.value,
+        }),
+      ),
     });
   });
 
@@ -205,7 +211,7 @@ export async function toggleDiscountAction(id: string) {
       action: nextStatus ? "discount.activated" : "discount.deactivated",
       entityType: "discount",
       entityId: id,
-      details: JSON.stringify({ code: existing.code, isActive: nextStatus }),
+      details: JSON.stringify(sanitizeAuditDetails({ code: existing.code, isActive: nextStatus })),
     });
   });
 
@@ -236,7 +242,7 @@ export async function deleteDiscountAction(id: string) {
       action: "discount.deleted",
       entityType: "discount",
       entityId: id,
-      details: JSON.stringify({ code: existing.code }),
+      details: JSON.stringify(sanitizeAuditDetails({ code: existing.code })),
     });
   });
 
