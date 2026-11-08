@@ -243,6 +243,27 @@ export function CartView({ initialCart, locale }: Props) {
                   {formatMoney(createMoney(cart.subtotal, cart.currency))}
                 </span>
               </div>
+              {cart.taxRatePercent && cart.taxRatePercent > 0 ? (
+                <div className="flex justify-between text-zinc-600">
+                  <span>
+                    {cart.taxInclusive
+                      ? `Termasuk PPN (${cart.taxRatePercent}%)`
+                      : `Estimasi PPN (${cart.taxRatePercent}%)`}
+                  </span>
+                  <span className="text-zinc-700">
+                    {formatMoney(
+                      createMoney(
+                        cart.taxInclusive
+                          ? Math.round(
+                              (cart.subtotal * cart.taxRatePercent) / (100 + cart.taxRatePercent),
+                            )
+                          : Math.round((cart.subtotal * cart.taxRatePercent) / 100),
+                        cart.currency,
+                      ),
+                    )}
+                  </span>
+                </div>
+              ) : null}
               <p className="text-xs text-zinc-400">
                 Shipping rates and promotional discounts are calculated during checkout.
               </p>

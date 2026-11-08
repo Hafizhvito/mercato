@@ -1,3 +1,6 @@
+import { eq } from "drizzle-orm";
+import { db } from "@/lib/db";
+import * as schema from "@/lib/db/schema";
 import { cartRepository } from "./repository";
 import type { Cart } from "./schema";
 
@@ -26,6 +29,8 @@ export interface DetailedCart {
   items: DetailedCartItem[];
   subtotal: number;
   totalQuantity: number;
+  taxRatePercent?: number;
+  taxInclusive?: boolean;
   priceChanges: { name: string; oldPrice: number; newPrice: number }[];
   removedItems: { name: string; reason: string }[];
   cappedItems: {
@@ -148,6 +153,16 @@ export class CartService {
       });
     }
 
+    // Fetch store tax settings
+    const [storeRow] = await db
+      .select({
+        taxRatePercent: schema.stores.taxRatePercent,
+        taxInclusive: schema.stores.taxInclusive,
+      })
+      .from(schema.stores)
+      .where(eq(schema.stores.id, storeId))
+      .limit(1);
+
     return {
       id: cart.id,
       storeId: cart.storeId,
@@ -157,6 +172,8 @@ export class CartService {
       items,
       subtotal,
       totalQuantity,
+      taxRatePercent: storeRow?.taxRatePercent ?? 0,
+      taxInclusive: storeRow?.taxInclusive ?? false,
       priceChanges,
       removedItems,
       cappedItems,

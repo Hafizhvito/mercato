@@ -36,6 +36,7 @@ export interface EmailService {
     to: string;
     orderNumber: string;
     totalAmountFormatted: string;
+    taxAmountFormatted?: string;
     orderUrl?: string;
     locale?: string;
   }): Promise<void>;
@@ -60,6 +61,14 @@ export interface EmailService {
     trackingNumber: string;
     carrier: string;
     trackingUrl?: string;
+    locale?: string;
+  }): Promise<void>;
+  sendStaffInviteEmail(options: {
+    to: string;
+    role: string;
+    inviteUrl: string;
+    token: string;
+    expiresAt: Date;
     locale?: string;
   }): Promise<void>;
   sendEmail(options: SendEmailOptions): Promise<void>;
@@ -116,6 +125,7 @@ export class ConsoleEmailService implements EmailService {
     to: string;
     orderNumber: string;
     totalAmountFormatted: string;
+    taxAmountFormatted?: string;
     orderUrl?: string;
     locale?: string;
   }): Promise<void> {
@@ -129,6 +139,7 @@ export class ConsoleEmailService implements EmailService {
         `To: ${options.to}\n` +
         `Order Number: ${options.orderNumber}\n` +
         `Locale: ${options.locale ?? "id"}\n` +
+        (options.taxAmountFormatted ? `Tax: ${options.taxAmountFormatted}\n` : "") +
         `Total: ${options.totalAmountFormatted}\n` +
         `Order URL: ${options.orderUrl ?? "N/A"}\n` +
         "=======================================================\n",
@@ -204,6 +215,30 @@ export class ConsoleEmailService implements EmailService {
         `Carrier: ${options.carrier}\n` +
         `Tracking Number: ${options.trackingNumber}\n` +
         `Tracking URL: ${options.trackingUrl ?? "N/A"}\n` +
+        "=======================================================\n",
+    );
+  }
+
+  async sendStaffInviteEmail(options: {
+    to: string;
+    role: string;
+    inviteUrl: string;
+    token: string;
+    expiresAt: Date;
+    locale?: string;
+  }): Promise<void> {
+    const safeUrl = options.inviteUrl.replace(/token=[^&\s]+/, "token=[REDACTED_ONE_TIME_TOKEN]");
+    logger.info(
+      { to: options.to, role: options.role, url: safeUrl },
+      "Development Email: Sending staff invitation link",
+    );
+    console.log(
+      "\n=======================================================\n" +
+        "[MERCATO DEV EMAIL SERVICE - STAFF INVITATION]\n" +
+        `To: ${options.to}\n` +
+        `Role: ${options.role}\n` +
+        `Invite URL: ${options.inviteUrl}\n` +
+        `Expires At: ${options.expiresAt.toISOString()}\n` +
         "=======================================================\n",
     );
   }
@@ -289,6 +324,7 @@ export class ResendEmailService implements EmailService {
     to: string;
     orderNumber: string;
     totalAmountFormatted: string;
+    taxAmountFormatted?: string;
     orderUrl?: string;
     locale?: string;
   }): Promise<void> {
@@ -301,6 +337,7 @@ export class ResendEmailService implements EmailService {
         react: React.createElement(OrderConfirmationEmail, {
           orderNumber: options.orderNumber,
           totalAmountFormatted: options.totalAmountFormatted,
+          taxAmountFormatted: options.taxAmountFormatted,
           orderUrl: options.orderUrl,
           locale: options.locale ?? "id",
         }),
@@ -419,6 +456,30 @@ export class ResendEmailService implements EmailService {
       );
       throw error;
     }
+  }
+
+  async sendStaffInviteEmail(options: {
+    to: string;
+    role: string;
+    inviteUrl: string;
+    token: string;
+    expiresAt: Date;
+    locale?: string;
+  }): Promise<void> {
+    const safeUrl = options.inviteUrl.replace(/token=[^&\s]+/, "token=[REDACTED_ONE_TIME_TOKEN]");
+    logger.info(
+      { to: options.to, role: options.role, url: safeUrl },
+      "Development Email: Sending staff invitation link",
+    );
+    console.log(
+      "\n=======================================================\n" +
+        "[MERCATO DEV EMAIL SERVICE - STAFF INVITATION]\n" +
+        `To: ${options.to}\n` +
+        `Role: ${options.role}\n` +
+        `Invite URL: ${options.inviteUrl}\n` +
+        `Expires At: ${options.expiresAt.toISOString()}\n` +
+        "=======================================================\n",
+    );
   }
 
   async sendEmail(options: SendEmailOptions): Promise<void> {

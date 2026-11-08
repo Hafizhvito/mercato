@@ -5,6 +5,7 @@ import { emailService } from "@/lib/email";
 import { logger } from "@/lib/logger";
 import type { Order } from "@/modules/orders/schema";
 import { orderService } from "@/modules/orders/service";
+import { sanitizeAuditDetails } from "@/server/audit-log";
 import { midtransPaymentProvider } from "./providers/midtrans";
 import { stripePaymentProvider } from "./providers/stripe";
 import type {
@@ -305,14 +306,16 @@ export class PaymentService {
                 action: "order.late_payment_flagged_for_review",
                 entityType: "order",
                 entityId: order.id,
-                details: JSON.stringify({
-                  orderNumber: order.orderNumber,
-                  amountMinor: verification.amountMinor,
-                  paymentTransactionId: verification.paymentTransactionId,
-                  provider: providerName,
-                  reason:
-                    "Late payment received after order cancellation; stock exhausted. Awaiting merchant manual review.",
-                }),
+                details: JSON.stringify(
+                  sanitizeAuditDetails({
+                    orderNumber: order.orderNumber,
+                    amountMinor: verification.amountMinor,
+                    paymentTransactionId: verification.paymentTransactionId,
+                    provider: providerName,
+                    reason:
+                      "Late payment received after order cancellation; stock exhausted. Awaiting merchant manual review.",
+                  }),
+                ),
               });
             }
           }
@@ -490,14 +493,16 @@ export class PaymentService {
         entityType: "order",
         entityId: order.id,
         userId: params.actorId ?? null,
-        details: JSON.stringify({
-          orderNumber: order.orderNumber,
-          amountMinor: params.amountMinor,
-          currency: order.currency,
-          reason: params.reason,
-          restocked: params.restockInventory ?? false,
-          providerRefundId: refundResult.providerRefundId,
-        }),
+        details: JSON.stringify(
+          sanitizeAuditDetails({
+            orderNumber: order.orderNumber,
+            amountMinor: params.amountMinor,
+            currency: order.currency,
+            reason: params.reason,
+            restocked: params.restockInventory ?? false,
+            providerRefundId: refundResult.providerRefundId,
+          }),
+        ),
       });
 
       // Restock inventory if requested

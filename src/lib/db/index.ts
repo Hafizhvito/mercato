@@ -29,14 +29,63 @@ const rawConnectionString =
 
 const connectionString = normalizeConnectionString(rawConnectionString);
 
-export const pool =
-  globalForDb.pool ??
-  new Pool({
-    connectionString,
+function createResilientPool(connStr: string | undefined): Pool {
+  const instance = new Pool({
+    connectionString: connStr,
     max: env.NODE_ENV === "production" ? 20 : 5,
     idleTimeoutMillis: 30000,
-    connectionTimeoutMillis: 5000,
+    connectionTimeoutMillis: 15000,
+    keepAlive: true,
   });
+
+  instance.on("error", () => {
+    // Prevent unhandled error crashes when remote Postgres proxy resets an idle socket
+  });
+
+  const rawQuery = instance.query.bind(instance) as (...args: unknown[]) => unknown;
+  const isTransientSocketError = (err: unknown): boolean => {
+    if (!err || typeof err !== "object") return false;
+    const e = err as { code?: string; message?: string; cause?: unknown };
+    const code = e.code ?? "";
+    const msg = e.message ?? "";
+    if (
+      code === "ECONNRESET" ||
+      code === "ETIMEDOUT" ||
+      code === "EPIPE" ||
+      msg.includes("ECONNRESET") ||
+      msg.includes("Connection terminated unexpectedly") ||
+      msg.includes("Client has encountered a connection error")
+    ) {
+      return true;
+    }
+    return e.cause ? isTransientSocketError(e.cause) : false;
+  };
+
+  (instance as unknown as { query: (...args: unknown[]) => unknown }).query = (
+    ...args: unknown[]
+  ) => {
+    const hasCallback = args.some((arg) => typeof arg === "function");
+    if (hasCallback) {
+      return rawQuery(...args);
+    }
+    const executeWithRetry = async (attempt: number): Promise<unknown> => {
+      try {
+        return await (rawQuery(...args) as Promise<unknown>);
+      } catch (err) {
+        if (attempt < 3 && isTransientSocketError(err)) {
+          await new Promise((resolve) => setTimeout(resolve, 150 * attempt));
+          return executeWithRetry(attempt + 1);
+        }
+        throw err;
+      }
+    };
+    return executeWithRetry(1);
+  };
+
+  return instance;
+}
+
+export const pool = globalForDb.pool ?? createResilientPool(connectionString);
 
 if (env.NODE_ENV !== "production") {
   globalForDb.pool = pool;

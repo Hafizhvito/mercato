@@ -46,14 +46,19 @@ This document outlines planned enhancements and deferred features across upcomin
 - [x] Storefront cart quantity caps (`MAX_CART_ITEM_QUANTITY = 10`) with dynamic alert banners
 - [x] Zero-secret public repository hygiene with Gitleaks workflow, SECURITY.md, and Dependabot automation
 
-## Phase 5: Operations and Merchant Dashboard
-- Real-time order fulfillment pipeline with courier tracking numbers
-- Customer management, lifetime value metrics, and purchase history
-- Admin analytics dashboard (revenue, units sold, conversion rate, low stock alerts)
-- Immutable merchant audit log recording administrative actions
-- Merchant staff role management (staff, admin, owner)
+## Phase 5: Operations and Merchant Dashboard [COMPLETED]
+- [x] Real-time order fulfillment pipeline with courier tracking numbers and email dispatch
+- [x] Customer management, lifetime value metrics, purchase history, and address book with Indonesian regional cascading
+- [x] Admin analytics dashboard (net revenue minus refunds, AOV, status distribution, top products, low stock alerts, Asia/Jakarta date bucketing)
+- [x] Immutable merchant audit log recording administrative actions with strict PII privacy safeguards
+- [x] Merchant staff invitation flow with expiring single-use activation tokens and role governance (staff, admin, owner)
+- [x] Configurable store settings with real-time tax calculation and custom flat-rate shipping zones
+- [x] Order export to CSV with formula injection neutralization and phone number masking
 
-## Phase 6: Performance, Accessibility, and Hardening
+## Phase 6: Performance, Accessibility, and Security Hardening
+- **Two-Factor Authentication (2FA / TOTP):** Native Better Auth twoFactor plugin integration with QR code provisioning, 6-digit authenticator verification, emergency backup codes, and login challenge for administrative roles.
+- **Storefront Web Analytics & Visitor Tracking:** Privacy-respecting session and pageview tracking infrastructure to compute genuine visitor-to-order conversion rates without third-party tracker bloat.
+- **Customer Wishlist & Product Reviews:** Post-purchase customer feedback loop, star ratings, review moderation queue, and customer wishlist collections.
 - WCAG 2.2 AA accessibility audit and keyboard navigation pass
 - Image optimization pass with AVIF/WebP formats and responsive sizing
 - End-to-end checkout and admin operations test suite via Playwright

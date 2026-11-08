@@ -1,5 +1,5 @@
-import { index, integer, pgTable, timestamp, uuid, varchar } from "drizzle-orm/pg-core";
-import { stores } from "@/lib/db/schema";
+import { index, integer, pgTable, text, timestamp, uuid, varchar } from "drizzle-orm/pg-core";
+import { stores, user } from "@/lib/db/schema";
 import { productVariants } from "@/modules/catalog/schema";
 
 export const stockReservations = pgTable(
@@ -27,5 +27,31 @@ export const stockReservations = pgTable(
   ],
 );
 
+export const stockAdjustments = pgTable(
+  "stock_adjustments",
+  {
+    id: uuid("id").defaultRandom().primaryKey(),
+    storeId: uuid("store_id")
+      .notNull()
+      .references(() => stores.id, { onDelete: "cascade" }),
+    variantId: uuid("variant_id")
+      .notNull()
+      .references(() => productVariants.id, { onDelete: "cascade" }),
+    userId: text("user_id").references(() => user.id, { onDelete: "set null" }),
+    userName: varchar("user_name", { length: 255 }).notNull(),
+    previousStock: integer("previous_stock").notNull(),
+    newStock: integer("new_stock").notNull(),
+    delta: integer("delta").notNull(),
+    reason: text("reason").notNull(),
+    createdAt: timestamp("created_at", { withTimezone: true }).defaultNow().notNull(),
+  },
+  (table) => [
+    index("stock_adjustments_variant_idx").on(table.variantId),
+    index("stock_adjustments_store_idx").on(table.storeId),
+  ],
+);
+
 export type StockReservation = typeof stockReservations.$inferSelect;
 export type NewStockReservation = typeof stockReservations.$inferInsert;
+export type StockAdjustment = typeof stockAdjustments.$inferSelect;
+export type NewStockAdjustment = typeof stockAdjustments.$inferInsert;

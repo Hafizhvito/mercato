@@ -265,7 +265,19 @@ export function CheckoutView({ cart, provinces, locale }: Props) {
   // Cost calculations
   const discountAmount = appliedDiscount ? appliedDiscount.amountMinor : 0;
   const shippingCost = selectedRate ? selectedRate.costMinor : 0;
-  const totalAmount = Math.max(0, cart.subtotal - discountAmount + shippingCost);
+  const taxableSubtotal = Math.max(0, cart.subtotal - discountAmount);
+  const taxRate = cart.taxRatePercent || 0;
+  const isTaxInclusive = cart.taxInclusive || false;
+  const taxAmount =
+    taxRate > 0
+      ? isTaxInclusive
+        ? Math.round((taxableSubtotal * taxRate) / (100 + taxRate))
+        : Math.round((taxableSubtotal * taxRate) / 100)
+      : 0;
+  const totalAmount = Math.max(
+    0,
+    cart.subtotal - discountAmount + shippingCost + (isTaxInclusive ? 0 : taxAmount),
+  );
 
   return (
     <div className="max-w-6xl mx-auto px-4 py-8">
@@ -604,6 +616,13 @@ export function CheckoutView({ cart, provinces, locale }: Props) {
                     : "—"}
                 </span>
               </div>
+
+              {taxRate > 0 && (
+                <div className="flex justify-between text-zinc-600">
+                  <span>{isTaxInclusive ? `Termasuk PPN (${taxRate}%)` : `PPN (${taxRate}%)`}</span>
+                  <span>{formatMoney(createMoney(taxAmount, cart.currency))}</span>
+                </div>
+              )}
 
               <div className="flex justify-between font-bold text-base text-zinc-900 pt-2 border-t border-zinc-100">
                 <span>{t("total")}</span>

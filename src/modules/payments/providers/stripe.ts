@@ -132,6 +132,26 @@ export class StripePaymentProvider implements PaymentProvider {
       });
     }
 
+    // Handle exclusive tax: if gross total exceeds items + shipping - discount, add dedicated tax line item
+    const itemsSum =
+      items.reduce((acc, i) => acc + i.unitPrice * i.quantity, 0) +
+      (order.shippingAmount || 0) -
+      (order.discountAmount || 0);
+    const taxDifference = order.totalAmount - itemsSum;
+
+    if (taxDifference > 0) {
+      lineItems.push({
+        price_data: {
+          currency,
+          product_data: {
+            name: "Tax",
+          },
+          unit_amount: this.toStripeAmount(taxDifference, order.currency),
+        },
+        quantity: 1,
+      });
+    }
+
     const session = await this.client.checkout.sessions.create({
       mode: "payment",
       customer_email: order.guestEmail ?? undefined,

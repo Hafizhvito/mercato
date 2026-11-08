@@ -46,3 +46,12 @@ export function assertStoreAccess(user: SessionUser, targetStoreId: string): voi
     throw new AuthorizationError("Access denied for specified store context");
   }
 }
+
+export {
+  ADMIN_PERMISSIONS,
+  type AdminPermission,
+  assertPermission,
+  assertStaffModificationAllowed,
+  hasPermission,
+  ROLE_PERMISSIONS,
+} from "./permissions";

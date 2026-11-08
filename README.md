@@ -69,56 +69,70 @@ cp .env.example .env.local
 
 Fill in your configuration values:
 
-1. **DATABASE_URL:** Your pooled connection string from Neon (development branch). Use `?sslmode=verify-full` to ensure strict TLS verification while eliminating Node `pg` alias warnings.
-2. **TEST_DATABASE_URL:** An isolated Neon test branch or local test database connection string with `?sslmode=verify-full`. Test runs strictly refuse to execute if `TEST_DATABASE_URL` matches `DATABASE_URL`.
-3. **UPSTASH_REDIS_REST_URL & UPSTASH_REDIS_REST_TOKEN:** REST credentials from your Upstash Redis console. In production runtime, the application will refuse to boot if Upstash credentials are missing or set to dummy values.
-4. **BETTER_AUTH_SECRET:** A random 32-character string for signing session tokens.
-5. **BETTER_AUTH_URL & NEXT_PUBLIC_APP_URL:** Defaults to `http://localhost:3000` for local development.
-6. **SEED_ADMIN_EMAIL & SEED_ADMIN_PASSWORD:** Required credentials for provisioning the initial store owner account. Minimum 12 characters with mixed uppercase, lowercase, numbers, and symbols.
-7. **MIDTRANS_SERVER_KEY & NEXT_PUBLIC_MIDTRANS_CLIENT_KEY:** Midtrans API keys.
-8. **STRIPE_SECRET_KEY & STRIPE_WEBHOOK_SECRET:** Stripe test API keys.
-9. **RESEND_API_KEY:** Resend API key for transactional emails. If unset or containing test keys, Mercato automatically falls back to `ConsoleEmailService` (printing email bodies and links to stdout).
+1. **DATABASE_URL:** Pooled connection string from Neon PostgreSQL for development (`?sslmode=verify-full`).
+2. **TEST_DATABASE_URL:** Isolated Neon test branch connection string. Tests refuse to execute if identical to `DATABASE_URL`.
+3. **UPSTASH_REDIS_REST_URL & UPSTASH_REDIS_REST_TOKEN:** Upstash Redis REST credentials for rate limiting and edge caching.
+4. **BETTER_AUTH_SECRET:** Cryptographic secret for signing Better Auth session tokens (minimum 16 characters, 32 recommended).
+5. **BETTER_AUTH_URL & NEXT_PUBLIC_APP_URL:** Application base URLs (defaults to `http://localhost:3000`).
+6. **SEED_ADMIN_EMAIL, SEED_ADMIN_PASSWORD, & SEED_ADMIN_NAME:** Administrator credentials for provisioning the initial store owner account via `pnpm db:seed`. Minimum 12 characters with mixed uppercase, lowercase, numbers, and symbols.
+7. **MIDTRANS_SERVER_KEY, NEXT_PUBLIC_MIDTRANS_CLIENT_KEY, MIDTRANS_MERCHANT_ID, & MIDTRANS_IS_PRODUCTION:** Indonesian payment gateway credentials, merchant identifier, and environment mode (`true` or `false`).
+8. **AUTO_REFUND_ON_STOCK_EXHAUSTED:** Late payment policy toggle (`false` by default, flagging exhausted stock for manual review; `true` triggers automatic gateway refund).
+9. **STRIPE_SECRET_KEY, NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY, & STRIPE_WEBHOOK_SECRET:** Global payment gateway credentials and webhook signing secret.
+10. **RESEND_API_KEY & EMAIL_FROM:** Transactional email provider credentials and sender address. Falls back to console output if unset or containing test keys.
+11. **R2_ACCOUNT_ID, R2_ACCESS_KEY_ID, R2_SECRET_ACCESS_KEY, R2_BUCKET_NAME, & NEXT_PUBLIC_R2_PUBLIC_URL:** Cloudflare R2 / S3-compatible asset storage credentials and public CDN base URL.
+12. **INNGEST_EVENT_KEY & INNGEST_SIGNING_KEY:** Inngest credentials for asynchronous inventory sweeps and background jobs.
+13. **RAJAONGKIR_API_KEY & RAJAONGKIR_BASE_URL:** Third-party logistics API credentials and endpoint. Falls back to internal flat-rate shipping if unset.
+14. **GOOGLE_CLIENT_ID & GOOGLE_CLIENT_SECRET:** Optional Google OAuth credentials for social sign-in.
+15. **LOG_LEVEL:** Structured logging verbosity level (`fatal`, `error`, `warn`, `info`, `debug`, `trace`).
+16. **ALLOW_PRODUCTION_MUTATION & ALLOW_PRODUCTION_SEED:** Production safety override flags for data mutation and seed scripts.
+17. **NEXT_PUBLIC_SENTRY_DSN:** Optional Sentry client DSN for application monitoring.
 
 > [!CAUTION]
 > **Production Hosting Guard:** `SKIP_ENV_VALIDATION` must **never** be set on hosting platforms (such as Vercel, Railway, or Fly.io). It is reserved strictly for build-time compilation inside isolated CI runners. In production runtime, Mercato's rate limiter and environment guards enforce strict Upstash Redis credentials and database URLs to protect against unmetered traffic and misconfiguration.
 
 ### 3. Safe Database Migrations, Seeding, and Scripts
 
-Mercato includes safety guards on all mutating data scripts (`seed`, `seed-catalog`, `rewrite-legacy-images`, and `cleanup-legacy-admin`). To prevent accidental execution against production branches or incorrect databases:
+Mercato includes safety guards on all mutating data scripts (`seed`, `seed-catalog`, `seed-analytics-orders`, `rewrite-legacy-images`, and `cleanup-legacy-admin`). To prevent accidental execution against production branches or incorrect databases:
 1. Scripts refuse to run if `NODE_ENV === "production"`.
 2. Running a script without parameters displays the masked target (e.g. `ep-sw***tech/neondb`) and prompts for explicit confirmation.
-3. Execution requires the exact masked target flag:
+3. Execution requires the exact masked target flag. **Important (Windows PowerShell):** Always enclose the `--confirm-target` value in quotes (e.g. `--confirm-target='ep-sw***tech/neondb'`) to prevent PowerShell from misinterpreting slashes or punctuation as command separators.
+4. On Windows, execute commands via `pnpm.cmd`. Inline environment variables are set via `$env:VAR='value';`.
 
-```bash
+#### Windows PowerShell Command Reference:
+
+```powershell
 # Migrate primary development database
-pnpm db:generate
-pnpm db:migrate
+pnpm.cmd db:generate
+pnpm.cmd db:migrate
 
 # Migrate isolated test branch database
-pnpm db:migrate:test
+pnpm.cmd db:migrate:test
 
 # Import complete Indonesian administrative regions (38 prov, 514 reg, 7,265 dist)
-pnpm db:import-regions
+pnpm.cmd db:import-regions
 
-# Seed development users and store owner (requires SEED_ADMIN_EMAIL and SEED_ADMIN_PASSWORD in .env.local)
-pnpm db:seed --confirm-target=ep-sw***tech/neondb
+# Seed development users and store owner (password requires min 12 chars, uppercase, lowercase, number, symbol)
+$env:SEED_ADMIN_EMAIL='owner@example.com'; $env:SEED_ADMIN_PASSWORD='StrongPassword123!'; pnpm.cmd db:seed --confirm-target='ep-sw***tech/neondb'
 
 # Seed catalog categories, collections, and products
-pnpm db:seed-catalog --confirm-target=ep-sw***tech/neondb
+pnpm.cmd db:seed-catalog --confirm-target='ep-sw***tech/neondb'
+
+# Seed historical analytics demo orders (~200 orders spread across 60 days, idempotent with MRC-SIM- prefix)
+pnpm.cmd db:seed-analytics-orders --confirm-target='ep-sw***tech/neondb'
 
 # Rewrite any legacy external image URLs to self-hosted placeholders
-pnpm db:rewrite-legacy-images --confirm-target=ep-sw***tech/neondb
+pnpm.cmd db:rewrite-legacy-images --confirm-target='ep-sw***tech/neondb'
 
 # Purge legacy dummy admin accounts from earlier prototype phases
-pnpm db:cleanup-legacy-admin --confirm-target=ep-sw***tech/neondb
+pnpm.cmd db:cleanup-legacy-admin --confirm-target='ep-sw***tech/neondb'
 ```
 
 ### 4. Development Server
 
 Start the Next.js development server with Turbopack:
 
-```bash
-pnpm dev
+```powershell
+pnpm.cmd dev
 ```
 
 Open [http://localhost:3000](http://localhost:3000) in your browser. The application automatically directs to the default locale (`/id` or `/en`).

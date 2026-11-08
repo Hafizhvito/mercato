@@ -15,6 +15,7 @@ import { getEmailTranslations } from "../messages";
 interface OrderConfirmationEmailProps {
   orderNumber: string;
   totalAmountFormatted: string;
+  taxAmountFormatted?: string;
   orderUrl?: string;
   locale?: string;
 }
@@ -22,6 +23,7 @@ interface OrderConfirmationEmailProps {
 export function OrderConfirmationEmail({
   orderNumber,
   totalAmountFormatted,
+  taxAmountFormatted,
   orderUrl,
   locale = "id",
 }: OrderConfirmationEmailProps) {
@@ -50,6 +52,11 @@ export function OrderConfirmationEmail({
           <Text style={{ fontSize: "14px", color: "#52525b", lineHeight: "22px" }}>{desc}</Text>
           <Hr style={{ borderColor: "#e4e4e7", margin: "20px 0" }} />
           <Section>
+            {taxAmountFormatted && (
+              <Text style={{ fontSize: "14px", color: "#71717a", margin: "4px 0" }}>
+                Pajak: <strong style={{ color: "#18181b" }}>{taxAmountFormatted}</strong>
+              </Text>
+            )}
             <Text style={{ fontSize: "14px", color: "#71717a", margin: "4px 0" }}>
               {t.orderConfirmation.totalAmount}{" "}
               <strong style={{ color: "#18181b" }}>{totalAmountFormatted}</strong>

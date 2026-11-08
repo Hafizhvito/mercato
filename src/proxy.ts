@@ -18,7 +18,13 @@ export function proxy(req: NextRequest) {
 
   // Bypass next-intl completely for direct merchant admin paths
   if (pathname === "/admin" || pathname.startsWith("/admin/")) {
-    return NextResponse.next();
+    const requestHeaders = new Headers(req.headers);
+    requestHeaders.set("x-pathname", pathname);
+    return NextResponse.next({
+      request: {
+        headers: requestHeaders,
+      },
+    });
   }
 
   return handleIntl(req);

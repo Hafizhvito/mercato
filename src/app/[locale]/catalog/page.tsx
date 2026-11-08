@@ -3,6 +3,7 @@ import type { Metadata } from "next";
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import { setRequestLocale } from "next-intl/server";
+import { CatalogSortSelect } from "@/components/storefront/CatalogSortSelect";
 import { StorefrontHeader } from "@/components/storefront/Header";
 import { SafeImage } from "@/components/ui/SafeImage";
 import { db } from "@/lib/db";
@@ -143,33 +144,13 @@ export default async function StorefrontCatalogPage({ params, searchParams }: Ca
                 <ArrowUpDown className="h-3.5 w-3.5" />
                 {locale === "id" ? "Urutkan:" : "Sort by:"}
               </label>
-              <form method="GET">
-                {searchQuery && <input type="hidden" name="q" value={searchQuery} />}
-                {selectedCategorySlug && (
-                  <input type="hidden" name="category" value={selectedCategorySlug} />
-                )}
-                {selectedCollectionSlug && (
-                  <input type="hidden" name="collection" value={selectedCollectionSlug} />
-                )}
-                <select
-                  id="sort-select"
-                  name="sort"
-                  defaultValue={sort}
-                  onChange={(e) => e.target.form?.submit()}
-                  className="rounded-lg border border-zinc-200 bg-white px-3 py-1.5 text-xs text-zinc-900 focus:border-zinc-900 focus:outline-hidden"
-                >
-                  <option value="newest">{locale === "id" ? "Terbaru" : "Newest"}</option>
-                  <option value="price_asc">
-                    {locale === "id" ? "Harga: Rendah ke Tinggi" : "Price: Low to High"}
-                  </option>
-                  <option value="price_desc">
-                    {locale === "id" ? "Harga: Tinggi ke Rendah" : "Price: High to Low"}
-                  </option>
-                  {searchQuery && (
-                    <option value="relevance">{locale === "id" ? "Relevansi" : "Relevance"}</option>
-                  )}
-                </select>
-              </form>
+              <CatalogSortSelect
+                sort={sort}
+                searchQuery={searchQuery}
+                selectedCategorySlug={selectedCategorySlug}
+                selectedCollectionSlug={selectedCollectionSlug}
+                locale={locale}
+              />
             </div>
           </div>
         </div>

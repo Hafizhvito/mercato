@@ -219,3 +219,22 @@ This document records the architectural and engineering decisions made for the M
   2. **Compiler & License:** Compiled by `cahyadsn/wilayah` (Cahya DSN) and distributed under the MIT License (Copyright (c) 2017-2025 Cahya DSN).
   3. **RajaOngkir Courier Mapping & Fallback:** RajaOngkir's API ([Komerce RajaOngkir API](https://komerceapi.readme.io/reference/rajaongkir-api)) uses proprietary sequential integer identifiers (`city_id` from 1 to 501), rather than Kemendagri codes. The Starter tier exists historically for legacy accounts, while modern integrations use Komerce API. When `RAJAONGKIR_API_KEY` is not configured, Mercato's shipping service gracefully falls back to the internal `FlatRateShippingProvider`, ensuring that lack of third-party courier credentials never impairs storefront customer checkout.
 * **Consequences:** Establishes clear licensing compliance for commercial operation, guarantees zero runtime coupling to external courier API availability during local development, and documents the relationship between Kemendagri administrative data and third-party commercial APIs.
+
+---
+
+## ADR 0024: Granular Action-Based Permission Matrix for Back-Office Administration and Governance
+
+* **Status:** Accepted
+* **Context:** Prior phases relied on coarse numeric role rankings (`customer < staff < admin < owner`). In Phase 5, complex back-office administrative workflows (orders fulfillment, refunds, inventory adjustments, customer data access, discount management, analytics, store settings, and staff account management) require fine-grained operational boundaries. Specifically, operational staff need to fulfill orders and update stock, but must be barred from issuing financial refunds, modifying store-wide discounts, altering settings, or accessing sensitive audit logs. Furthermore, governance rules are required to prevent privilege escalation, self-role modifications, and accidental demotion or disabling of the sole store owner.
+* **Decision:** Implement a single source of truth permission matrix in `src/server/permissions.ts` defining typed granular permissions (`products:manage`, `inventory:adjust`, `orders:fulfill`, `orders:refund`, `orders:notes`, `customers:view`, `discounts:manage`, `analytics:view`, `settings:manage`, `staff:manage`, `owner:transfer`, `audit_log:view`, etc.):
+  1. **Owner:** Full authority over all domains, staff management, and ownership transfer.
+  2. **Admin:** Full operational authority across catalog, orders, refunds, discounts, analytics, settings, and non-owner staff management. Strictly barred from ownership transfer or modifying/demoting store owners.
+  3. **Staff:** Day-to-day fulfillment: products, inventory adjustments with reasons, order management (view, fulfill, add internal notes, cancel unpaid orders), and customer profiles (read-only). Strictly barred from issuing refunds, order exports, discount management, analytics, store settings, staff management, and audit logs.
+  4. **Customer:** Storefront shoppers; barred from all administrative permissions.
+  5. **Governance Invariants:**
+     - A user cannot modify their own administrative role.
+     - Admins cannot modify, demote, or disable store owners.
+     - Only store owners can elevate accounts to the owner role.
+     - The last owner of a store cannot be demoted or disabled.
+     - All administrative mutations, role changes, and account disables are audit logged.
+* **Consequences:** Provides robust defense-in-depth against privilege escalation and accidental lockout, ensures strict compliance and operational segregation between fulfillment staff and financial administrators, and centralizes all authorization logic into a single verifiable module.
